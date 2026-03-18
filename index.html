@@ -1,1 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Crypto ETF Analyzer — Lauren Diaz</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Space+Grotesk:wght@700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#010409;color:#f0f6fc;font-family:'IBM Plex Mono',monospace;min-height:100vh}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:#010409}
+  ::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
 
+  /* HEADER */
+  .header{background:#0d1117;border-bottom:1px solid #21262d;position:sticky;top:0;z-index:100}
+  .header-inner{max-width:1280px;margin:0 auto;padding:0 24px}
+  .header-top{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #161b22;gap:12px;flex-wrap:wrap}
+  .logo{background:linear-gradient(135deg,#f59e0b,#f97316);border-radius:6px;padding:5px 10px;font-size:14px;font-weight:700;color:#000}
+  .site-title{font-size:15px;font-weight:700;color:#f0f6fc;font-family:'Space Grotesk',sans-serif;letter-spacing:-0.01em}
+  .site-sub{font-size:9px;color:#6b7280;letter-spacing:0.1em}
+  .ticker-row{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+  .ticker{text-align:right}
+  .ticker-label{font-size:9px;color:#6b7280;letter-spacing:0.1em}
+  .ticker-price{font-size:15px;font-weight:700;color:#f0f6fc;display:flex;align-items:center;gap:5px;justify-content:flex-end}
+  .ticker-chg{font-size:10px}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;display:inline-block}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:3px;font-size:9px;letter-spacing:0.08em;white-space:nowrap}
+  .badge-live{background:#22c55e18;color:#22c55e;border:1px solid #22c55e33}
+  .badge-sourced{background:#f59e0b18;color:#f59e0b;border:1px solid #f59e0b33}
+  .badge-dot{width:5px;height:5px;border-radius:50%}
+  .badge-dot-live{background:#22c55e;animation:pulse 2s infinite}
+  .badge-dot-sourced{background:#f59e0b}
+  .refresh-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;font-size:9px;padding:3px 10px;border-radius:3px;cursor:pointer;font-family:inherit;letter-spacing:0.06em}
+  .refresh-btn:hover{opacity:0.75}
+  .update-time{font-size:9px;color:#6b7280}
+
+  /* TABS */
+  .tabs{display:flex}
+  .tab{background:none;border:none;cursor:pointer;padding:10px 16px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:#6b7280;border-bottom:2px solid transparent;letter-spacing:0.04em;transition:all 0.15s}
+  .tab:hover{color:#8b949e}
+  .tab.active{color:#f0f6fc;border-bottom-color:#00a8e8}
+  .tab-right{margin-left:auto;display:flex;align-items:center;font-size:9px;color:#6b7280;padding-right:4px}
+
+  /* BODY */
+  .body{max-width:1280px;margin:0 auto;padding:22px 24px 60px}
+
+  /* KPI STRIP */
+  .kpi-strip{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  .kpi{background:#0d1117;border:1px solid #21262d;border-radius:4px;padding:14px 18px;flex:1;min-width:140px}
+  .kpi-accent-btc{border-top:2px solid #f59e0b}
+  .kpi-accent-eth{border-top:2px solid #00a8e8}
+  .kpi-accent-green{border-top:2px solid #22c55e}
+  .kpi-label{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px}
+  .kpi-value{font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;min-height:26px}
+  .kpi-sub{font-size:10px;color:#6b7280;margin-top:4px}
+
+  /* LEGEND */
+  .legend{background:#161b22;border:1px solid #21262d;border-left:3px solid #00a8e8;padding:9px 14px;border-radius:4px;margin-bottom:20px;font-size:11px;color:#6b7280;display:flex;gap:20px;flex-wrap:wrap}
+
+  /* CARD */
+  .card{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:22px;margin-bottom:20px}
+  .card-title{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
+  .card-sub{font-size:10px;color:#6b7280;margin-bottom:18px}
+
+  /* TABLE */
+  .etf-table{width:100%;border-collapse:collapse;font-size:13px}
+  .etf-table th{padding:9px 13px;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;user-select:none;white-space:nowrap;color:#8b949e;border-bottom:1px solid #21262d}
+  .etf-table th:hover{color:#00a8e8}
+  .etf-table th.sorted{color:#00a8e8}
+  .etf-table td{padding:11px 13px;border-bottom:1px solid #161b22}
+  .etf-table tr:nth-child(even) td{background:#0d1117}
+  .etf-table tr:hover td{background:#161b22}
+  .ticker-name{color:#f0f6fc;font-weight:700}
+  .issuer-name{font-size:10px;margin-top:3px}
+  .coin-name{font-size:10px;color:#6b7280;margin-top:1px}
+  .tag{padding:1px 5px;border-radius:3px;font-size:9px}
+  .tag-btc{background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44}
+  .tag-eth{background:#00a8e822;color:#00a8e8;border:1px solid #00a8e844}
+  .text-right{text-align:right}
+  .text-green{color:#22c55e;font-weight:600}
+  .text-red{color:#ef4444;font-weight:600}
+  .text-yellow{color:#f59e0b;font-weight:600}
+  .text-white{color:#f0f6fc;font-weight:600}
+  .text-dim{color:#6b7280}
+  .share-pct{font-size:10px;color:#6b7280}
+
+  /* INSIGHT BOX */
+  .insight{background:#0d1117;border:1px solid #21262d;border-radius:4px;padding:14px 18px;font-size:12px;color:#8b949e;line-height:1.8;margin-top:0}
+  .insight-btc{border-left:3px solid #f59e0b}
+  .insight-eth{border-left:3px solid #00a8e8}
+  .insight-label{font-weight:700}
+
+  /* CHART GRID */
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .chart-wrap{position:relative;height:220px}
+  .chart-wrap-tall{position:relative;height:280px}
+  .chart-wrap-md{position:relative;height:200px}
+
+  /* SPINNER */
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #30363d;border-top:2px solid #00a8e8;border-radius:50%;animation:spin 0.8s linear infinite}
+
+  /* FLOW TABLE */
+  .flow-note{font-size:11px;color:#6b7280;margin-top:12px;font-style:italic}
+
+  /* ERROR */
+  .error-bar{background:#ef444414;border:1px solid #ef444440;border-left:3px solid #ef4444;padding:10px 16px;border-radius:4px;margin-bottom:18px;font-size:11px;color:#fca5a5}
+
+  /* BLOOMBERG BOX */
+  .bloomberg{background:#0d1117;border:1px solid #21262d;border-left:3px solid #a855f7;border-radius:4px;padding:14px 18px;font-size:12px;color:#8b949e;line-height:1.9}
+  .bloomberg-title{color:#a855f7;font-weight:700;margin-bottom:6px}
+  .bloomberg-row{display:flex;gap:16px;flex-wrap:wrap}
+  .bloomberg-label{color:#6b7280;min-width:160px}
+  code{color:#22c55e;font-size:11px;font-family:'IBM Plex Mono',monospace}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .fade{animation:fadeIn 0.22s ease}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-top">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="logo">₿ ETF</div>
+        <div>
+          <div class="site-title">Crypto ETF Analyzer</div>
+          <div class="site-sub">INSTITUTIONAL DIGITAL ASSET INTELLIGENCE</div>
+        </div>
+      </div>
+      <div class="ticker-row">
+        <div class="ticker">
+          <div class="ticker-label">BTC/USD</div>
+          <div class="ticker-price" id="btc-price"><div class="spinner"></div></div>
+          <div class="ticker-chg" id="btc-chg"></div>
+        </div>
+        <div class="ticker">
+          <div class="ticker-label">ETH/USD</div>
+          <div class="ticker-price" id="eth-price"><div class="spinner"></div></div>
+          <div class="ticker-chg" id="eth-chg"></div>
+        </div>
+        <div style="border-left:1px solid #21262d;padding-left:16px;display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <span class="badge badge-live" id="cg-badge"><span class="badge-dot badge-dot-live"></span>LIVE · CoinGecko</span>
+            <span class="badge badge-sourced"><span class="badge-dot badge-dot-sourced"></span>SOURCED · ETF.com</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="update-time" id="update-time"></span>
+            <button class="refresh-btn" onclick="fetchAll()">↺ REFRESH</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('overview',this)">Overview</button>
+      <button class="tab" onclick="switchTab('btc',this)">Bitcoin ETFs</button>
+      <button class="tab" onclick="switchTab('eth',this)">Ethereum ETFs</button>
+      <button class="tab" onclick="switchTab('flows',this)">Fund Flows</button>
+      <button class="tab" onclick="switchTab('comparison',this)">Comparison</button>
+    </div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="body">
+  <div id="error-bar" style="display:none" class="error-bar"></div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi kpi-accent-btc">
+      <div class="kpi-label">BTC Spot Price</div>
+      <div class="kpi-value text-yellow" id="kpi-btc"><div class="spinner"></div></div>
+      <div class="kpi-sub" id="kpi-btc-sub">loading...</div>
+    </div>
+    <div class="kpi kpi-accent-eth">
+      <div class="kpi-label">ETH Spot Price</div>
+      <div class="kpi-value" style="color:#00a8e8" id="kpi-eth"><div class="spinner"></div></div>
+      <div class="kpi-sub" id="kpi-eth-sub">loading...</div>
+    </div>
+    <div class="kpi kpi-accent-btc">
+      <div class="kpi-label">BTC ETF AUM</div>
+      <div class="kpi-value text-yellow">$101.6B</div>
+      <div class="kpi-sub">8 spot products · issuer-reported</div>
+    </div>
+    <div class="kpi kpi-accent-eth">
+      <div class="kpi-label">ETH ETF AUM</div>
+      <div class="kpi-value" style="color:#00a8e8">$11.4B</div>
+      <div class="kpi-sub">6 spot products · issuer-reported</div>
+    </div>
+    <div class="kpi kpi-accent-green">
+      <div class="kpi-label">BTC Mkt Cap</div>
+      <div class="kpi-value text-green" id="kpi-mcap"><div class="spinner"></div></div>
+      <div class="kpi-sub" id="kpi-mcap-sub"></div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <span><span style="color:#22c55e">● LIVE</span> — BTC/ETH spot prices from CoinGecko API · auto-refreshes every 60s</span>
+    <span><span style="color:#f59e0b">● SOURCED</span> — AUM, flows, NAV premium from issuer reports + ETF.com · Jan–Feb 2025</span>
+  </div>
+
+  <!-- TAB CONTENT -->
+  <div id="tab-overview" class="fade">
+    <div class="card">
+      <div class="card-title">Total AUM Growth — BTC & ETH Spot ETFs</div>
+      <div class="card-sub">Combined AUM since Bitcoin ETF launch · Jan 2024 → Feb 2025 · Sourced from issuer reports</div>
+      <div class="chart-wrap"><canvas id="chart-aum"></canvas></div>
+    </div>
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-title">Bitcoin ETF Market Share</div>
+        <div class="chart-wrap"><canvas id="chart-btc-pie"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Ethereum ETF Market Share</div>
+        <div class="chart-wrap"><canvas id="chart-eth-pie"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-btc" class="fade" style="display:none">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="card-title">Bitcoin Spot ETFs — Full Comparison</div>
+          <div style="font-size:10px;color:#6b7280">All 8 SEC-approved products · Launch: Jan 11, 2024 · Click headers to sort</div>
+        </div>
+        <span class="badge badge-sourced"><span class="badge-dot badge-dot-sourced"></span>SOURCED · ETF.com + Issuers</span>
+      </div>
+      <div style="overflow-x:auto"><table class="etf-table" id="btc-table"></table></div>
+    </div>
+    <div class="insight insight-btc">
+      <span class="insight-label" style="color:#f59e0b">Key Insight: </span>
+      BlackRock's IBIT captured <span style="color:#f0f6fc">52%</span> of total Bitcoin ETF AUM — the fastest ETF to $10B in history.
+      Grayscale's GBTC sees persistent outflows due to its <span style="color:#ef4444">1.50% expense ratio</span> vs.
+      competitors at <span style="color:#22c55e">0.20–0.25%</span>. Bitwise (BITB) and VanEck (HODL) offer the lowest fees at <span style="color:#22c55e">0.20%</span>.
+    </div>
+  </div>
+
+  <div id="tab-eth" class="fade" style="display:none">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="card-title">Ethereum Spot ETFs — Full Comparison</div>
+          <div style="font-size:10px;color:#6b7280">All 6 SEC-approved products · Launch: Jul 23, 2024 · Click headers to sort</div>
+        </div>
+        <span class="badge badge-sourced"><span class="badge-dot badge-dot-sourced"></span>SOURCED · ETF.com + Issuers</span>
+      </div>
+      <div style="overflow-x:auto"><table class="etf-table" id="eth-table"></table></div>
+    </div>
+    <div class="insight insight-eth">
+      <span class="insight-label" style="color:#00a8e8">Key Insight: </span>
+      Grayscale's legacy ETHE carries a <span style="color:#ef4444">2.50% expense ratio</span>, driving allocators to ETHA and FETH.
+      Grayscale's Mini Trust (ETHW) at <span style="color:#22c55e">0.15%</span> is deliberately cannibalizing ETHE — mirroring their BTC ETF defensive strategy.
+      ETH products have accumulated <span style="color:#f0f6fc">$11.4B</span> vs BTC's <span style="color:#f0f6fc">$101.6B</span>.
+    </div>
+  </div>
+
+  <div id="tab-flows" class="fade" style="display:none">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="card-title">Daily Net Flows — Top Bitcoin ETFs</div>
+          <div class="card-sub" style="margin-bottom:0">Net inflows (+) and outflows (−) in $M · Jan–Feb 2025</div>
+        </div>
+        <span class="badge badge-sourced"><span class="badge-dot badge-dot-sourced"></span>SOURCED · ETF.com</span>
+      </div>
+      <div class="chart-wrap-tall"><canvas id="chart-flows"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Aggregate Daily Market Flows</div>
+      <div class="card-sub">Total net flows across all Bitcoin spot ETFs</div>
+      <div class="chart-wrap-md"><canvas id="chart-flows-total"></canvas></div>
+    </div>
+  </div>
+
+  <div id="tab-comparison" class="fade" style="display:none">
+    <div class="card">
+      <div class="card-title">Expense Ratio — All 14 Spot ETFs</div>
+      <div class="card-sub"><span style="color:#22c55e">Green ≤ 0.20%</span> · <span style="color:#ef4444">Red ≥ 1.0%</span> · Static — fees updated manually</div>
+      <div style="height:320px"><canvas id="chart-fees"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">NAV Premium / Discount</div>
+      <div class="card-sub">Positive = trading above NAV · Negative = discount · Source: issuer daily reports</div>
+      <div style="height:300px"><canvas id="chart-nav"></canvas></div>
+    </div>
+    <div class="bloomberg">
+      <div class="bloomberg-title">🏦 Production Upgrade Path — Bloomberg Terminal</div>
+      <div style="margin-bottom:8px">BofA Bloomberg access unlocks fully live AUM + flows data:</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div class="bloomberg-row"><span class="bloomberg-label">AUM (live)</span><code>BDP('IBIT US Equity', 'FUND_TOTAL_ASSETS')</code></div>
+        <div class="bloomberg-row"><span class="bloomberg-label">Daily flows</span><code>BDP('IBIT US Equity', 'FUND_FLOW_1D')</code></div>
+        <div class="bloomberg-row"><span class="bloomberg-label">NAV</span><code>BDP('IBIT US Equity', 'FUND_NET_ASSET_VAL')</code></div>
+        <div class="bloomberg-row"><span class="bloomberg-label">Premium/Discount</span><code>BDP('IBIT US Equity', 'FUND_PREMIUM_DISCOUNT')</code></div>
+        <div class="bloomberg-row"><span class="bloomberg-label">30-day history</span><code>BDH('IBIT US Equity', 'FUND_FLOW_1D', -30, 0)</code></div>
+      </div>
+      <div style="margin-top:10px;color:#6b7280;font-size:11px">Knowing these Bloomberg field names signals genuine institutional experience in interviews.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const BTC_ETFS = [
+  {ticker:"IBIT", name:"iShares Bitcoin Trust",         issuer:"BlackRock",    fee:0.25, aum:52.4, nav:-0.02},
+  {ticker:"GBTC", name:"Grayscale Bitcoin Trust ETF",   issuer:"Grayscale",    fee:1.50, aum:21.8, nav:-0.18},
+  {ticker:"FBTC", name:"Fidelity Wise Origin Bitcoin",  issuer:"Fidelity",     fee:0.25, aum:17.6, nav: 0.01},
+  {ticker:"ARKB", name:"ARK 21Shares Bitcoin ETF",      issuer:"ARK/21Shares", fee:0.21, aum: 3.8, nav: 0.03},
+  {ticker:"BITB", name:"Bitwise Bitcoin ETF",           issuer:"Bitwise",      fee:0.20, aum: 3.5, nav: 0.02},
+  {ticker:"HODL", name:"VanEck Bitcoin ETF",            issuer:"VanEck",       fee:0.20, aum: 1.3, nav: 0.01},
+  {ticker:"BTCO", name:"Invesco Galaxy Bitcoin ETF",    issuer:"Invesco",      fee:0.25, aum: 0.6, nav: 0.00},
+  {ticker:"BRRR", name:"CoinShares Valkyrie Bitcoin",   issuer:"CoinShares",   fee:0.25, aum: 0.5, nav:-0.01},
+];
+
+const ETH_ETFS = [
+  {ticker:"ETHE", name:"Grayscale Ethereum Trust ETF",  issuer:"Grayscale",  fee:2.50, aum:5.8,  nav:-0.22},
+  {ticker:"ETHA", name:"iShares Ethereum Trust ETF",    issuer:"BlackRock",  fee:0.25, aum:2.6,  nav: 0.01},
+  {ticker:"FETH", name:"Fidelity Ethereum Fund",        issuer:"Fidelity",   fee:0.25, aum:1.5,  nav: 0.01},
+  {ticker:"ETHW", name:"Grayscale Ethereum Mini Trust", issuer:"Grayscale",  fee:0.15, aum:1.0,  nav: 0.00},
+  {ticker:"CETH", name:"21Shares Core Ethereum ETF",    issuer:"21Shares",   fee:0.21, aum:0.08, nav: 0.00},
+  {ticker:"EZET", name:"Franklin Ethereum ETF",         issuer:"Franklin",   fee:0.19, aum:0.05, nav: 0.00},
+];
+
+const ISSUER_COLORS = {
+  BlackRock:"#00a8e8",Grayscale:"#f59e0b",Fidelity:"#22c55e",
+  "ARK/21Shares":"#a855f7",Bitwise:"#f97316",VanEck:"#06b6d4",
+  Invesco:"#ec4899",CoinShares:"#84cc16","21Shares":"#a855f7",Franklin:"#14b8a6"
+};
+
+const AUM_LABELS = ["Jul 24","Aug 24","Sep 24","Oct 24","Nov 24","Dec 24","Jan 25","Feb 25"];
+const AUM_BTC   = [14.2,18.6,22.4,29.8,48.2,58.4,68.2,101.6];
+const AUM_ETH   = [null,6.8,8.1,9.2,11.4,12.8,14.2,11.4];
+
+const FLOW_LABELS = ["Jan 13","Jan 14","Jan 15","Jan 16","Jan 17","Jan 21","Jan 22","Jan 23","Jan 24","Jan 27","Jan 28","Jan 29","Jan 30","Jan 31","Feb 3","Feb 4","Feb 5","Feb 6","Feb 7"];
+const FLOW_DATA = {
+  ibit:[203,288,188,344,420,528,399,312,487,565,421,339,501,613,448,389,513,467,535],
+  fbtc:[121,98,145,162,189,221,198,145,211,244,189,152,199,267,212,178,234,199,244],
+  gbtc:[-89,-102,-71,-135,-99,-152,-88,-201,-119,-178,-142,-98,-189,-213,-164,-98,-201,-175,-188],
+  arkb:[44,31,53,28,61,88,45,32,71,92,54,39,62,88,55,42,73,58,81],
+  bitb:[39,22,41,19,52,71,39,29,58,78,45,32,54,71,46,37,61,49,68],
+  total:[318,337,356,418,623,756,593,317,708,801,567,464,627,826,597,548,680,598,740]
+};
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+const fmtUSD = v => v>=1000?`$${(v/1000).toFixed(1)}k`:`$${v.toFixed(2)}`;
+const fmtB   = v => `$${v.toFixed(1)}B`;
+const fmtPct = v => `${v>0?"+":""}${v.toFixed(2)}%`;
+const fmtNum = v => v>=1e12?`$${(v/1e12).toFixed(2)}T`:v>=1e9?`$${(v/1e9).toFixed(1)}B`:`$${v.toFixed(0)}`;
+
+// ── CHART DEFAULTS ────────────────────────────────────────────────────────
+Chart.defaults.color = "#6b7280";
+Chart.defaults.borderColor = "#21262d";
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 11;
+
+function tooltipStyle(){
+  return {
+    backgroundColor:"#161b22",borderColor:"#30363d",borderWidth:1,
+    titleColor:"#8b949e",bodyColor:"#f0f6fc",padding:10,
+    titleFont:{size:11},bodyFont:{size:12}
+  };
+}
+
+let charts = {};
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ── LIVE DATA ─────────────────────────────────────────────────────────────
+async function fetchAll(){
+  try{
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true&include_market_cap=true");
+    const d = await res.json();
+    const btc=d.bitcoin, eth=d.ethereum;
+
+    const fmt=v=>`$${Math.round(v).toLocaleString()}`;
+    const chgColor=v=>v>=0?"#22c55e":"#ef4444";
+
+    document.getElementById("btc-price").innerHTML=`${fmt(btc.usd)}<span class="live-dot"></span>`;
+    document.getElementById("btc-chg").innerHTML=`<span style="color:${chgColor(btc.usd_24h_change)}">${fmtPct(btc.usd_24h_change)} 24h</span>`;
+    document.getElementById("eth-price").innerHTML=`${fmt(eth.usd)}<span class="live-dot"></span>`;
+    document.getElementById("eth-chg").innerHTML=`<span style="color:${chgColor(eth.usd_24h_change)}">${fmtPct(eth.usd_24h_change)} 24h</span>`;
+
+    document.getElementById("kpi-btc").innerHTML=`<span>${fmt(btc.usd)}</span><span class="live-dot"></span>`;
+    document.getElementById("kpi-btc-sub").textContent=`${fmtPct(btc.usd_24h_change)} today`;
+    document.getElementById("kpi-eth").innerHTML=`<span>${fmt(eth.usd)}</span><span class="live-dot"></span>`;
+    document.getElementById("kpi-eth-sub").textContent=`${fmtPct(eth.usd_24h_change)} today`;
+    document.getElementById("kpi-mcap").innerHTML=`<span>${fmtNum(btc.usd_market_cap)}</span><span class="live-dot"></span>`;
+
+    document.getElementById("update-time").textContent=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    document.getElementById("error-bar").style.display="none";
+  }catch(e){
+    document.getElementById("error-bar").textContent="⚠ CoinGecko unavailable — showing cached data. "+e.message;
+    document.getElementById("error-bar").style.display="block";
+  }
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────
+function buildOverviewCharts(){
+  destroyChart("aum");
+  charts["aum"] = new Chart(document.getElementById("chart-aum"),{
+    type:"line",
+    data:{
+      labels:AUM_LABELS,
+      datasets:[
+        {label:"BTC ETF AUM",data:AUM_BTC,borderColor:"#f59e0b",backgroundColor:"rgba(245,158,11,0.1)",fill:true,tension:0.3,pointRadius:3},
+        {label:"ETH ETF AUM",data:AUM_ETH,borderColor:"#00a8e8",backgroundColor:"rgba(0,168,232,0.1)",fill:true,tension:0.3,pointRadius:3,spanGaps:true}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#8b949e"}},tooltip:{...tooltipStyle(),callbacks:{label:c=>`${c.dataset.label}: $${c.raw}B`}}},scales:{y:{ticks:{callback:v=>`$${v}B`},grid:{color:"#21262d"}},x:{grid:{color:"#21262d"}}}}
+  });
+
+  const btcTotal = BTC_ETFS.reduce((s,e)=>s+e.aum,0);
+  destroyChart("btc-pie");
+  charts["btc-pie"] = new Chart(document.getElementById("chart-btc-pie"),{
+    type:"doughnut",
+    data:{labels:BTC_ETFS.map(e=>e.ticker),datasets:[{data:BTC_ETFS.map(e=>e.aum),backgroundColor:BTC_ETFS.map(e=>ISSUER_COLORS[e.issuer]||"#6b7280"),borderColor:"#0d1117",borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#8b949e",font:{size:10}}},tooltip:{...tooltipStyle(),callbacks:{label:c=>`${c.label}: $${c.raw}B (${((c.raw/btcTotal)*100).toFixed(1)}%)`}}}}
+  });
+
+  const ethTotal = ETH_ETFS.reduce((s,e)=>s+e.aum,0);
+  destroyChart("eth-pie");
+  charts["eth-pie"] = new Chart(document.getElementById("chart-eth-pie"),{
+    type:"doughnut",
+    data:{labels:ETH_ETFS.map(e=>e.ticker),datasets:[{data:ETH_ETFS.map(e=>e.aum),backgroundColor:ETH_ETFS.map(e=>ISSUER_COLORS[e.issuer]||"#6b7280"),borderColor:"#0d1117",borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#8b949e",font:{size:10}}},tooltip:{...tooltipStyle(),callbacks:{label:c=>`${c.label}: $${c.raw}B (${((c.raw/ethTotal)*100).toFixed(1)}%)`}}}}
+  });
+}
+
+function buildFlowCharts(){
+  destroyChart("flows");
+  charts["flows"] = new Chart(document.getElementById("chart-flows"),{
+    type:"bar",
+    data:{
+      labels:FLOW_LABELS,
+      datasets:[
+        {label:"IBIT", data:FLOW_DATA.ibit, backgroundColor:"#00a8e8"},
+        {label:"FBTC", data:FLOW_DATA.fbtc, backgroundColor:"#22c55e"},
+        {label:"GBTC", data:FLOW_DATA.gbtc, backgroundColor:"#f59e0b"},
+        {label:"ARKB", data:FLOW_DATA.arkb, backgroundColor:"#a855f7"},
+        {label:"BITB", data:FLOW_DATA.bitb, backgroundColor:"#f97316"},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#8b949e"}},tooltip:{...tooltipStyle(),callbacks:{label:c=>`${c.dataset.label}: $${c.raw}M`}}},scales:{x:{stacked:false,grid:{color:"#21262d"},ticks:{maxRotation:30}},y:{grid:{color:"#21262d"},ticks:{callback:v=>`$${v}M`}}}}
+  });
+
+  destroyChart("flows-total");
+  charts["flows-total"] = new Chart(document.getElementById("chart-flows-total"),{
+    type:"line",
+    data:{labels:FLOW_LABELS,datasets:[{label:"Total Net Flow",data:FLOW_DATA.total,borderColor:"#22c55e",backgroundColor:"rgba(34,197,94,0.1)",fill:true,tension:0.3,pointRadius:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tooltipStyle(),callbacks:{label:c=>`Total: $${c.raw}M`}}},scales:{y:{grid:{color:"#21262d"},ticks:{callback:v=>`$${v}M`}},x:{grid:{color:"#21262d"},ticks:{maxRotation:30}}}}
+  });
+}
+
+function buildComparisonCharts(){
+  const allEtfs = [...BTC_ETFS,...ETH_ETFS].sort((a,b)=>a.fee-b.fee);
+  destroyChart("fees");
+  charts["fees"] = new Chart(document.getElementById("chart-fees"),{
+    type:"bar",
+    data:{
+      labels:allEtfs.map(e=>e.ticker),
+      datasets:[{label:"Expense Ratio",data:allEtfs.map(e=>e.fee),backgroundColor:allEtfs.map(e=>e.fee>=1?"#ef4444":e.fee<=0.20?"#22c55e":"#00a8e8")}]
+    },
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tooltipStyle(),callbacks:{label:c=>`${c.raw.toFixed(2)}%`}}},scales:{x:{grid:{color:"#21262d"},ticks:{callback:v=>`${v}%`}},y:{grid:{color:"#21262d"}}}}
+  });
+
+  const navEtfs = [...BTC_ETFS,...ETH_ETFS].sort((a,b)=>a.nav-b.nav);
+  destroyChart("nav");
+  charts["nav"] = new Chart(document.getElementById("chart-nav"),{
+    type:"bar",
+    data:{
+      labels:navEtfs.map(e=>e.ticker),
+      datasets:[{label:"NAV ±",data:navEtfs.map(e=>e.nav),backgroundColor:navEtfs.map(e=>e.nav>=0?"#22c55e":"#ef4444")}]
+    },
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tooltipStyle(),callbacks:{label:c=>`${c.raw.toFixed(2)}%`}}},scales:{x:{grid:{color:"#21262d"},ticks:{callback:v=>`${v}%`}},y:{grid:{color:"#21262d"}}}}
+  });
+}
+
+// ── ETF TABLES ────────────────────────────────────────────────────────────
+function feeColor(f){return f>=1?"text-red":f<=0.2?"text-green":"text-white"}
+function navColor(n){return Math.abs(n)<0.05?"text-green":n<-0.1?"text-red":"text-yellow"}
+
+function buildTable(tableId, etfs, type){
+  const total = etfs.reduce((s,e)=>s+e.aum,0);
+  const tagClass = type==="btc"?"tag-btc":"tag-eth";
+  const tagLabel = type.toUpperCase();
+
+  let html = `<thead><tr>
+    <th style="text-align:left">Ticker</th>
+    <th class="text-right">AUM</th>
+    <th class="text-right">Exp. Ratio</th>
+    <th class="text-right">NAV ±</th>
+  </tr></thead><tbody>`;
+
+  etfs.forEach(e=>{
+    const ic = ISSUER_COLORS[e.issuer]||"#6b7280";
+    html+=`<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="ticker-name">${e.ticker}</span>
+          <span class="tag ${tagClass}">${tagLabel}</span>
+        </div>
+        <div class="issuer-name" style="color:${ic}">${e.issuer}</div>
+        <div class="coin-name">${e.name}</div>
+      </td>
+      <td class="text-right">
+        <div class="text-white">${fmtB(e.aum)}</div>
+        <div class="share-pct">${((e.aum/total)*100).toFixed(1)}%</div>
+      </td>
+      <td class="text-right"><span class="${feeColor(e.fee)}">${e.fee.toFixed(2)}%</span></td>
+      <td class="text-right"><span class="${navColor(e.nav)}">${fmtPct(e.nav)}</span></td>
+    </tr>`;
+  });
+  html+="</tbody>";
+  document.getElementById(tableId).innerHTML=html;
+}
+
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────
+let chartsBuilt = {};
+function switchTab(id, btn){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  btn.classList.add("active");
+  ["overview","btc","eth","flows","comparison"].forEach(t=>{
+    document.getElementById("tab-"+t).style.display = t===id?"block":"none";
+    if(t===id) document.getElementById("tab-"+t).className="fade";
+  });
+
+  if(!chartsBuilt[id]){
+    chartsBuilt[id]=true;
+    if(id==="overview") buildOverviewCharts();
+    if(id==="flows") buildFlowCharts();
+    if(id==="comparison") buildComparisonCharts();
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+buildTable("btc-table", BTC_ETFS, "btc");
+buildTable("eth-table", ETH_ETFS, "eth");
+buildOverviewCharts();
+chartsBuilt["overview"]=true;
+fetchAll();
+setInterval(fetchAll, 60000);
+</script>
+</body>
+</html>
