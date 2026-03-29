@@ -1,0 +1,623 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AICR — AI × Crypto Thematic ETF Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f4f1eb;color:#1a1a2e;font-family:'DM Sans',sans-serif;min-height:100vh}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#f4f1eb}
+::-webkit-scrollbar-thumb{background:#c8c0b0;border-radius:3px}
+
+/* HEADER */
+.header{background:#1a1a2e;padding:0 32px}
+.header-inner{max-width:1280px;margin:0 auto;padding:16px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.logo-row{display:flex;align-items:center;gap:14px}
+.logo{background:linear-gradient(135deg,#c9a84c,#e8c87a);border-radius:6px;padding:7px 12px;font-size:13px;font-weight:500;color:#1a1a2e;font-family:'DM Mono',monospace;letter-spacing:0.04em}
+.site-title{font-size:17px;font-weight:600;color:#f4f1eb;letter-spacing:-0.01em}
+.site-sub{font-size:10px;color:#8b8fa8;letter-spacing:0.08em;margin-top:2px;font-family:'DM Mono',monospace}
+.back-link{font-size:11px;color:#8b8fa8;text-decoration:none;font-family:'DM Mono',monospace;border:1px solid #2e2e4a;padding:6px 12px;border-radius:4px;transition:all 0.15s}
+.back-link:hover{color:#c9a84c;border-color:#c9a84c66}
+
+/* HERO */
+.hero{background:#1a1a2e;padding:56px 32px 48px}
+.hero-inner{max-width:1280px;margin:0 auto}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;background:transparent;color:#c9a84c;border:1px solid #c9a84c55;padding:4px 12px;border-radius:2px;font-size:10px;font-family:'DM Mono',monospace;letter-spacing:0.1em;margin-bottom:20px;text-transform:uppercase}
+.hero-tag-dot{width:5px;height:5px;border-radius:50%;background:#c9a84c;animation:pulse 2s infinite}
+.hero-title{font-size:52px;font-weight:900;letter-spacing:-0.04em;line-height:1.0;margin-bottom:16px;font-family:'Playfair Display',serif;color:#f4f1eb}
+.hero-title span{color:#c9a84c}
+.hero-desc{font-size:15px;color:#8b8fa8;line-height:1.75;max-width:620px;margin-bottom:28px;font-weight:400}
+.hero-disclaimer{font-size:11px;color:#6b6f82;background:#12122096;border:1px solid #2e2e4a;border-left:3px solid #c9a84c;padding:10px 14px;border-radius:2px;max-width:620px;font-family:'DM Mono',monospace;line-height:1.6}
+
+/* LAYER SELECTOR */
+.layer-section{max-width:1280px;margin:0 auto;padding:40px 32px 0}
+.section-label{font-size:10px;color:#8b8f9a;text-transform:uppercase;letter-spacing:0.14em;font-family:'DM Mono',monospace;margin-bottom:16px}
+.layer-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-bottom:36px;background:#ddd8ce;border:1px solid #ddd8ce;border-radius:6px;overflow:hidden}
+.layer-card{background:#f4f1eb;padding:22px;cursor:pointer;transition:all 0.2s;position:relative}
+.layer-card:hover{background:#edeae2}
+.layer-card.active{background:#1a1a2e}
+.layer-card.active .layer-num{color:#c9a84c}
+.layer-card.active .layer-name{color:#f4f1eb}
+.layer-card.active .layer-desc{color:#8b8fa8}
+.layer-card.active .holding-tag{background:#2e2e4a;color:#8b8fa8;border-color:#3e3e5a}
+.layer-card.active .holding-tag.new{background:#c9a84c22;color:#c9a84c;border-color:#c9a84c44}
+.layer-card.active .holding-tag.crypto{background:#4a9eff22;color:#4a9eff;border-color:#4a9eff44}
+.layer-num{font-size:10px;font-family:'DM Mono',monospace;color:#a09880;letter-spacing:0.1em;margin-bottom:8px;text-transform:uppercase}
+.layer-name{font-size:17px;font-weight:600;color:#1a1a2e;margin-bottom:8px;font-family:'Playfair Display',serif}
+.layer-desc{font-size:12px;color:#6b6f7a;line-height:1.6;margin-bottom:14px}
+.layer-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:2px}
+.status-green{background:#22c55e15;color:#22a85e;border:1px solid #22c55e33}
+.status-yellow{background:#c9a84c15;color:#a08030;border:1px solid #c9a84c33}
+.status-purple{background:#8b6fd022;color:#7b5fc0;border:1px solid #8b6fd033}
+.layer-holdings{margin-top:14px;display:flex;flex-wrap:wrap;gap:5px}
+.holding-tag{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:2px;background:#e8e4dc;color:#8b8a7a;border:1px solid #d8d4cc}
+.holding-tag.new{background:#c9a84c18;color:#a08030;border-color:#c9a84c33}
+.holding-tag.crypto{background:#4a9eff15;color:#2a7acc;border-color:#4a9eff33}
+
+/* BODY */
+.body{max-width:1280px;margin:0 auto;padding:0 32px 60px}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-bottom:28px;background:#ddd8ce;border:1px solid #ddd8ce;border-radius:6px;overflow:hidden}
+.kpi{background:#f4f1eb;padding:18px 20px}
+.kpi-accent-purple{border-top:3px solid #7b5fc0}
+.kpi-accent-green{border-top:3px solid #22a85e}
+.kpi-accent-red{border-top:3px solid #cc4444}
+.kpi-accent-blue{border-top:3px solid #2a7acc}
+.kpi-accent-yellow{border-top:3px solid #c9a84c}
+.kpi-label{font-size:9px;color:#9b9a8a;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:6px;font-family:'DM Mono',monospace}
+.kpi-value{font-size:24px;font-weight:600;font-family:'Playfair Display',serif}
+.kpi-sub{font-size:10px;color:#9b9a8a;margin-top:4px;font-family:'DM Mono',monospace}
+
+/* CARD */
+.card{background:#ffffff;border:1px solid #e4e0d8;border-radius:6px;padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(26,26,46,0.04)}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;flex-wrap:wrap;gap:8px}
+.card-title{font-size:11px;color:#9b9a8a;text-transform:uppercase;letter-spacing:0.12em;font-family:'DM Mono',monospace}
+.card-sub{font-size:11px;color:#b0ae9e;margin-bottom:20px;font-family:'DM Mono',monospace}
+.chart-wrap{position:relative}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+
+/* WEIGHTS */
+.weights-grid{display:flex;flex-direction:column;gap:14px}
+.weight-row{display:flex;align-items:center;gap:12px}
+.weight-label{min-width:110px;font-size:12px;font-family:'DM Mono',monospace;color:#8b8a7a}
+.weight-ticker{font-weight:500;color:#1a1a2e;font-size:13px}
+.weight-type{font-size:9px;color:#b0ae9e;display:block;margin-top:1px}
+.weight-slider{flex:1;accent-color:#c9a84c;height:4px;cursor:pointer}
+.weight-pct{min-width:44px;text-align:right;font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:#c9a84c}
+.weight-bar-wrap{flex:1;height:5px;background:#e8e4dc;border-radius:3px;overflow:hidden}
+.weight-bar{height:100%;border-radius:3px;transition:width 0.3s ease}
+.total-row{display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid #e8e4dc;margin-top:4px}
+.total-label{font-size:11px;color:#b0ae9e;font-family:'DM Mono',monospace}
+.total-val{font-size:13px;font-weight:600;font-family:'DM Mono',monospace}
+
+/* CORRELATION TABLE */
+.corr-table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:12px}
+.corr-table th{padding:8px 12px;color:#9b9a8a;font-size:10px;font-weight:500;letter-spacing:0.06em;text-align:center;border-bottom:1px solid #e8e4dc}
+.corr-table th:first-child{text-align:left}
+.corr-table td{padding:8px 12px;text-align:center;border-bottom:1px solid #f0ede8}
+.corr-table td:first-child{text-align:left;color:#8b8a7a;font-size:11px}
+.corr-cell{display:inline-block;padding:3px 8px;border-radius:2px;font-weight:500;font-size:12px}
+
+/* THESIS */
+.thesis{background:#1a1a2e;border-radius:6px;padding:24px 28px;margin-bottom:16px}
+.thesis-title{color:#c9a84c;font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;letter-spacing:0.06em;text-transform:uppercase}
+.thesis-body{font-size:14px;color:#8b8fa8;line-height:1.9}
+.thesis-body strong{color:#f4f1eb;font-weight:600}
+
+/* LEGEND */
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#9b9a8a;font-family:'DM Mono',monospace}
+.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+/* COMPARE TABLE */
+.compare-table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:13px}
+.compare-table th{padding:10px 14px;text-align:right;font-size:10px;color:#9b9a8a;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e8e4dc}
+.compare-table th:first-child{text-align:left}
+.compare-table td{padding:12px 14px;text-align:right;border-bottom:1px solid #f0ede8}
+.compare-table td:first-child{text-align:left;font-weight:600;color:#1a1a2e;font-family:'DM Sans',sans-serif}
+.compare-table tr:hover td{background:#faf8f4}
+.highlight-row td{background:#1a1a2e08}
+.highlight-row td:first-child{color:#7b5fc0;font-family:'DM Sans',sans-serif}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.fade{animation:fadeIn 0.25s ease}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="logo-row">
+      <div class="logo">AI × CR</div>
+      <div>
+        <div class="site-title">AICR Thematic ETF Simulator</div>
+        <div class="site-sub">AI × CRYPTO CONVERGENCE RESEARCH — BY LAUREN DIAZ</div>
+      </div>
+    </div>
+    <a class="back-link" href="index.html">← Back to ETF Analyzer</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-tag"><span class="hero-tag-dot"></span>ORIGINAL RESEARCH · HYPOTHETICAL SIMULATION</div>
+    <h1 class="hero-title">What if AI and Crypto<br><span>were one ETF?</span></h1>
+    <p class="hero-desc">
+      The leading institutional asset managers identify AI and tokenization as separate mega-forces in their 2026 outlooks — but they are increasingly the same infrastructure story. This simulator explores a hypothetical thematic ETF (<strong style="color:#f0f6fc">AICR</strong>) that captures the convergence of artificial intelligence and digital assets across three investability tiers. Adjust the weights. Compare the returns. Stress-test the thesis.
+    </p>
+    <div class="hero-disclaimer">
+      ⚠ Hypothetical simulation only. Past performance is not indicative of future results. AICR is not a real ETF — this is original research exploring a product thesis. All return data is illustrative and based on publicly available historical prices.
+    </div>
+  </div>
+</div>
+
+<!-- LAYER SELECTOR -->
+<div class="layer-section">
+  <div class="section-label">Step 1 — Choose a Portfolio Layer</div>
+  <div class="layer-cards">
+
+    <div class="layer-card active" id="layer-card-1" onclick="selectLayer(1)">
+      <div class="layer-num">Layer 1</div>
+      <div class="layer-name">Equities Only</div>
+      <div class="layer-desc">Fully investable today. Public equities at the AI × crypto intersection — no token exposure. Could be filed with the SEC as a traditional thematic ETF tomorrow.</div>
+      <span class="layer-status status-green">✓ SEC Investable Now</span>
+      <div class="layer-holdings">
+        <span class="holding-tag">COIN</span>
+        <span class="holding-tag">NVDA</span>
+        <span class="holding-tag">CRWV</span>
+        <span class="holding-tag">MARA</span>
+        <span class="holding-tag">RIOT</span>
+        <span class="holding-tag">MSTR</span>
+      </div>
+    </div>
+
+    <div class="layer-card" id="layer-card-2" onclick="selectLayer(2)">
+      <div class="layer-num">Layer 2</div>
+      <div class="layer-name">Equities + Crypto ETFs</div>
+      <div class="layer-desc">Adds SEC-approved Bitcoin and Ethereum spot ETF exposure on top of Layer 1. Fully investable using existing regulated wrappers. This is the real product opportunity.</div>
+      <span class="layer-status status-yellow">✓ Investable via ETF Wrappers</span>
+      <div class="layer-holdings">
+        <span class="holding-tag">COIN</span>
+        <span class="holding-tag">NVDA</span>
+        <span class="holding-tag">CRWV</span>
+        <span class="holding-tag">MARA</span>
+        <span class="holding-tag">MSTR</span>
+        <span class="holding-tag crypto new">+ IBIT</span>
+        <span class="holding-tag crypto new">+ ETHA</span>
+      </div>
+    </div>
+
+    <div class="layer-card" id="layer-card-3" onclick="selectLayer(3)">
+      <div class="layer-num">Layer 3</div>
+      <div class="layer-name">Full Vision</div>
+      <div class="layer-desc">Adds AI-native crypto tokens — Bittensor, Render, Fetch.ai — that are not yet SEC-approved for ETF inclusion. Shows the full thesis if regulation catches up.</div>
+      <span class="layer-status status-purple">◈ Aspirational · Pending Regulation</span>
+      <div class="layer-holdings">
+        <span class="holding-tag">COIN</span>
+        <span class="holding-tag">NVDA</span>
+        <span class="holding-tag crypto">IBIT</span>
+        <span class="holding-tag crypto">ETHA</span>
+        <span class="holding-tag new">+ TAO</span>
+        <span class="holding-tag new">+ RENDER</span>
+        <span class="holding-tag new">+ FET</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BODY -->
+  <div class="body" style="padding-left:0;padding-right:0">
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip" id="kpi-strip">
+      <div class="kpi kpi-accent-purple">
+        <div class="kpi-label">AICR Return</div>
+        <div class="kpi-value" id="kpi-return" style="color:#a855f7">—</div>
+        <div class="kpi-sub">Since Jan 2024</div>
+      </div>
+      <div class="kpi kpi-accent-green">
+        <div class="kpi-label">vs S&P 500</div>
+        <div class="kpi-value" id="kpi-vs-spy" style="color:#22c55e">—</div>
+        <div class="kpi-sub">Outperformance</div>
+      </div>
+      <div class="kpi kpi-accent-blue">
+        <div class="kpi-label">Sharpe Ratio</div>
+        <div class="kpi-value" id="kpi-sharpe" style="color:#00a8e8">—</div>
+        <div class="kpi-sub">Risk-adjusted return</div>
+      </div>
+      <div class="kpi kpi-accent-yellow">
+        <div class="kpi-label">Volatility</div>
+        <div class="kpi-value" id="kpi-vol" style="color:#f59e0b">—</div>
+        <div class="kpi-sub">Annualized std dev</div>
+      </div>
+      <div class="kpi kpi-accent-red">
+        <div class="kpi-label">Max Drawdown</div>
+        <div class="kpi-value" id="kpi-dd" style="color:#ef4444">—</div>
+        <div class="kpi-sub">Peak to trough</div>
+      </div>
+    </div>
+
+    <!-- PERFORMANCE CHART -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Hypothetical Performance — AICR vs Benchmarks</div>
+          <div class="card-sub">Indexed to 100 at Jan 1, 2024 · Illustrative simulation based on component historical prices</div>
+        </div>
+      </div>
+      <div class="chart-legend" id="perf-legend"></div>
+      <div class="chart-wrap" style="height:320px"><canvas id="chart-perf"></canvas></div>
+    </div>
+
+    <!-- ALLOCATION + WEIGHTS -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Portfolio Allocation</div>
+        <div class="card-sub">Current layer composition</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-alloc"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Adjust Weights</div>
+        <div class="card-sub">Drag to rebalance — performance updates automatically</div>
+        <div class="weights-grid" id="weights-grid"></div>
+        <div class="total-row">
+          <span class="total-label">Total Allocation</span>
+          <span class="total-val" id="total-weight" style="color:#22c55e">100%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPARISON TABLE -->
+    <div class="card">
+      <div class="card-title">Head-to-Head Comparison</div>
+      <div class="card-sub">AICR vs major benchmarks · All metrics illustrative · Jan 2024 – Mar 2026</div>
+      <table class="compare-table" id="compare-table"></table>
+    </div>
+
+    <!-- CORRELATION -->
+    <div class="card">
+      <div class="card-title">Correlation Matrix</div>
+      <div class="card-sub">How AICR components move relative to each other and traditional assets · 1.0 = perfect correlation · 0.0 = uncorrelated</div>
+      <div style="overflow-x:auto"><table class="corr-table" id="corr-table"></table></div>
+    </div>
+
+    <!-- THESIS -->
+    <div class="thesis">
+      <div class="thesis-title">✦ The Investment Thesis</div>
+      <div class="thesis-body" id="thesis-text"></div>
+    </div>
+
+    <!-- WHAT WOULD IT TAKE -->
+    <div class="card" style="background:#fff">
+      <div class="card-title">What Would It Take to Launch This ETF?</div>
+      <div class="card-sub">The regulatory and market conditions required for each layer to become a real product</div>
+      <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px">
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div style="min-width:80px;font-size:10px;font-family:'DM Mono',monospace;color:#22a85e;background:#22c55e11;border:1px solid #22c55e33;padding:4px 8px;border-radius:2px;text-align:center;line-height:1.6">LAYER 1<br>NOW</div>
+          <div style="font-size:13px;color:#6b6f7a;line-height:1.7">A pure-equity AI × crypto thematic ETF could be filed with the SEC today. The basket of Coinbase, Nvidia, CoreWeave, Marathon, and MicroStrategy represents a fully regulated, exchange-listed portfolio. This is the minimum viable product version of the thesis.</div>
+        </div>
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div style="min-width:80px;font-size:10px;font-family:'DM Mono',monospace;color:#a08030;background:#c9a84c11;border:1px solid #c9a84c33;padding:4px 8px;border-radius:2px;text-align:center;line-height:1.6">LAYER 2<br>TODAY</div>
+          <div style="font-size:13px;color:#6b6f7a;line-height:1.7">Adding Bitcoin and Ethereum exposure via existing spot ETFs requires no new regulatory approval — these are already SEC-registered products from multiple issuers. A fund-of-funds structure or direct ETF allocation could achieve this today, subject to investment company act considerations.</div>
+        </div>
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div style="min-width:80px;font-size:10px;font-family:'DM Mono',monospace;color:#7b5fc0;background:#8b6fd011;border:1px solid #8b6fd033;padding:4px 8px;border-radius:2px;text-align:center;line-height:1.6">LAYER 3<br>FUTURE</div>
+          <div style="font-size:13px;color:#6b6f7a;line-height:1.7">Direct inclusion of Bittensor (TAO), Render (RENDER), and Fetch.ai (FET) tokens requires SEC spot ETF approval for each asset — similar to the path Bitcoin and Ethereum traveled. As the regulatory framework matures under the current administration's more crypto-friendly posture, this layer moves from aspirational to achievable.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const PERIODS = ["Jan 24","Apr 24","Jul 24","Oct 24","Jan 25","Apr 25","Jul 25","Oct 25","Jan 26","Mar 26"];
+
+// Indexed returns (100 = start Jan 2024) - illustrative based on real price movements
+const BENCHMARKS = {
+  spy:   [100,104,108,115,118,122,116,121,119,117],
+  btc:   [100,148,162,231,198,185,142,168,152,141],
+  botz:  [100,108,119,131,128,136,129,138,132,128],
+  qqq:   [100,107,114,124,120,128,122,130,126,123],
+};
+
+const LAYER_DATA = {
+  1: {
+    name: "Layer 1 — Equities Only",
+    color: "#22c55e",
+    returns: [100,118,129,148,142,151,138,147,141,136],
+    holdings: [
+      {ticker:"COIN",  name:"Coinbase",      type:"Equity",  color:"#00a8e8", pct:25},
+      {ticker:"NVDA",  name:"Nvidia",         type:"Equity",  color:"#22c55e", pct:25},
+      {ticker:"CRWV",  name:"CoreWeave",      type:"Equity",  color:"#06b6d4", pct:20},
+      {ticker:"MARA",  name:"Marathon Digital",type:"Equity", color:"#a855f7", pct:15},
+      {ticker:"MSTR",  name:"MicroStrategy",  type:"Equity",  color:"#f97316", pct:15},
+    ],
+    stats: {ret:36, spy_out:19, sharpe:0.82, vol:34, dd:-38},
+    thesis: `Layer 1 represents the <strong>minimum viable product</strong> version of the AI × crypto thesis — a basket of publicly listed equities that sit directly at the intersection of artificial intelligence infrastructure and digital asset adoption. Coinbase provides exposure to crypto market structure and institutional custody infrastructure. Nvidia is the foundational picks-and-shovels play for both AI compute and crypto mining. CoreWeave, which went public in 2025 after building its business on GPU infrastructure originally developed for crypto mining, is the clearest embodiment of the AI-crypto convergence story. Marathon Digital and MicroStrategy provide asymmetric Bitcoin exposure through equity wrappers with established institutional familiarity. This layer could be filed with the SEC as a traditional thematic ETF today — no regulatory innovation required.`,
+    corr: {
+      "AICR L1":  [1.00, 0.72, 0.68, 0.61, 0.55, 0.48],
+      "BTC":      [0.72, 1.00, 0.58, 0.44, 0.38, 0.29],
+      "S&P 500":  [0.68, 0.58, 1.00, 0.71, 0.52, 0.43],
+      "BOTZ":     [0.61, 0.44, 0.71, 1.00, 0.48, 0.39],
+      "Gold":     [0.55, 0.38, 0.52, 0.48, 1.00, 0.31],
+      "Bonds":    [0.48, 0.29, 0.43, 0.39, 0.31, 1.00],
+    }
+  },
+  2: {
+    name: "Layer 2 — Equities + Crypto ETFs",
+    color: "#f59e0b",
+    returns: [100,131,148,178,162,171,149,164,153,146],
+    holdings: [
+      {ticker:"COIN",  name:"Coinbase",      type:"Equity",  color:"#00a8e8", pct:20},
+      {ticker:"NVDA",  name:"Nvidia",         type:"Equity",  color:"#22c55e", pct:20},
+      {ticker:"CRWV",  name:"CoreWeave",      type:"Equity",  color:"#06b6d4", pct:15},
+      {ticker:"MARA",  name:"Marathon Digital",type:"Equity", color:"#a855f7", pct:10},
+      {ticker:"MSTR",  name:"MicroStrategy",  type:"Equity",  color:"#f97316", pct:10},
+      {ticker:"IBIT",  name:"Bitcoin Spot ETF",type:"Crypto ETF",color:"#f59e0b",pct:15},
+      {ticker:"ETHA",  name:"Ethereum Spot ETF",type:"Crypto ETF",color:"#ec4899",pct:10},
+    ],
+    stats: {ret:46, spy_out:29, sharpe:0.79, vol:41, dd:-44},
+    thesis: `Layer 2 is the <strong>real product opportunity</strong>. By adding SEC-approved Bitcoin and Ethereum spot ETF exposure on top of the equity layer, the basket captures the full AI × crypto convergence thesis using only regulated, exchange-listed instruments. No new regulatory approvals are required — Bitcoin and Ethereum spot ETFs are already SEC-registered products collectively managing over $110B in assets. The addition of crypto exposure meaningfully improves the return profile relative to Layer 1, while the equity layer dampens the pure volatility of a Bitcoin-only position. The explosive growth of spot crypto ETFs since their January 2024 launch has proven that institutional demand for regulated crypto wrappers is real and durable. AICR Layer 2 simply extends that wrapper logic to capture a broader convergence thesis — not just Bitcoin as digital gold, but the entire AI and digital asset infrastructure layer as a portfolio allocation.`,
+    corr: {
+      "AICR L2":  [1.00, 0.81, 0.64, 0.58, 0.44, 0.31],
+      "BTC":      [0.81, 1.00, 0.58, 0.44, 0.38, 0.29],
+      "S&P 500":  [0.64, 0.58, 1.00, 0.71, 0.52, 0.43],
+      "BOTZ":     [0.58, 0.44, 0.71, 1.00, 0.48, 0.39],
+      "Gold":     [0.44, 0.38, 0.52, 0.48, 1.00, 0.31],
+      "Bonds":    [0.31, 0.29, 0.43, 0.39, 0.31, 1.00],
+    }
+  },
+  3: {
+    name: "Layer 3 — Full Vision",
+    color: "#a855f7",
+    returns: [100,142,168,212,184,198,162,188,168,155],
+    holdings: [
+      {ticker:"COIN",  name:"Coinbase",      type:"Equity",    color:"#00a8e8", pct:15},
+      {ticker:"NVDA",  name:"Nvidia",         type:"Equity",    color:"#22c55e", pct:15},
+      {ticker:"CRWV",  name:"CoreWeave",      type:"Equity",    color:"#06b6d4", pct:10},
+      {ticker:"MSTR",  name:"MicroStrategy",  type:"Equity",    color:"#f97316", pct:10},
+      {ticker:"IBIT",  name:"Bitcoin Spot ETF",type:"Crypto ETF",color:"#f59e0b", pct:20},
+      {ticker:"ETHA",  name:"Ethereum Spot ETF",type:"Crypto ETF",color:"#ec4899", pct:10},
+      {ticker:"TAO",   name:"Bittensor",      type:"AI Token",  color:"#a855f7", pct:10},
+      {ticker:"RENDER",name:"Render Network", type:"AI Token",  color:"#84cc16", pct:5},
+      {ticker:"FET",   name:"Fetch.ai",       type:"AI Token",  color:"#14b8a6", pct:5},
+    ],
+    stats: {ret:55, spy_out:38, sharpe:0.71, vol:52, dd:-58},
+    thesis: `Layer 3 represents the <strong>full vision</strong> of the AI × crypto convergence thesis — what AICR looks like if regulation catches up to the technology. The addition of AI-native crypto tokens captures a return stream that pure equity or Bitcoin exposure simply cannot replicate. Bittensor (TAO) is building a decentralized marketplace for AI models — essentially an open-source alternative to OpenAI, running on a blockchain. Render Network (RENDER) is a decentralized GPU marketplace that allows anyone to contribute rendering and AI compute power in exchange for tokens. Fetch.ai (FET), recently merged with Ocean Protocol and SingularityNET into the ASI Alliance, is building autonomous AI agent infrastructure on blockchain. These projects are not speculative bets on unproven technology — they are operational networks with real usage, real revenue, and real institutional interest. The regulatory path for spot ETFs covering these assets is longer than Bitcoin and Ethereum, but the current administration's crypto-friendly posture suggests it is a matter of when, not if. Layer 3 is the product roadmap, not just a research exercise.`,
+    corr: {
+      "AICR L3":  [1.00, 0.86, 0.59, 0.52, 0.38, 0.24],
+      "BTC":      [0.86, 1.00, 0.58, 0.44, 0.38, 0.29],
+      "S&P 500":  [0.59, 0.58, 1.00, 0.71, 0.52, 0.43],
+      "BOTZ":     [0.52, 0.44, 0.71, 1.00, 0.48, 0.39],
+      "Gold":     [0.38, 0.38, 0.52, 0.48, 1.00, 0.31],
+      "Bonds":    [0.24, 0.29, 0.43, 0.39, 0.31, 1.00],
+    }
+  }
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let currentLayer = 1;
+let weights = {};
+let charts = {};
+
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ── LAYER SWITCH ──────────────────────────────────────────────────────────
+function selectLayer(n) {
+  currentLayer = n;
+  [1,2,3].forEach(i => {
+    document.getElementById('layer-card-'+i).classList.toggle('active', i===n);
+  });
+  const data = LAYER_DATA[n];
+  weights = {};
+  data.holdings.forEach(h => weights[h.ticker] = h.pct);
+  render();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render() {
+  const data = LAYER_DATA[currentLayer];
+  renderKPIs(data);
+  renderPerfChart(data);
+  renderAllocChart(data);
+  renderWeights(data);
+  renderCompareTable(data);
+  renderCorrTable(data);
+  renderThesis(data);
+}
+
+function renderKPIs(data) {
+  const s = data.stats;
+  const outColor = s.spy_out >= 0 ? '#22c55e' : '#ef4444';
+  document.getElementById('kpi-return').style.color='#7b5fc0';
+  document.getElementById('kpi-return').textContent = '+'+s.ret+'%';
+  document.getElementById('kpi-vs-spy').style.color = outColor;
+  document.getElementById('kpi-vs-spy').textContent = (s.spy_out>=0?'+':'')+s.spy_out+'%';
+  document.getElementById('kpi-sharpe').textContent = s.sharpe.toFixed(2);
+  document.getElementById('kpi-vol').textContent = s.vol+'%';
+  document.getElementById('kpi-dd').textContent = s.dd+'%';
+}
+
+function renderPerfChart(data) {
+  destroyChart('perf');
+  const legend = document.getElementById('perf-legend');
+  const items = [
+    {label:'AICR ('+data.name.split('—')[0].trim()+')', color:data.color, data:data.returns},
+    {label:'Bitcoin (BTC)',  color:'#f59e0b', data:BENCHMARKS.btc},
+    {label:'S&P 500',        color:'#22c55e', data:BENCHMARKS.spy},
+    {label:'AI ETF (BOTZ)',  color:'#00a8e8', data:BENCHMARKS.botz},
+  ];
+  legend.innerHTML = items.map(i=>
+    `<div class="legend-item"><div class="legend-dot" style="background:${i.color}"></div>${i.label}</div>`
+  ).join('');
+
+  charts['perf'] = new Chart(document.getElementById('chart-perf'),{
+    type:'line',
+    data:{
+      labels:PERIODS,
+      datasets:items.map(i=>({
+        label:i.label, data:i.data, borderColor:i.color,
+        backgroundColor:i.color+'18', fill: i.label.startsWith('AICR'),
+        borderWidth: i.label.startsWith('AICR')?3:1.5,
+        pointRadius: i.label.startsWith('AICR')?4:2,
+        tension:0.3
+      }))
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1a1a2e',borderColor:'#2e2e4a',borderWidth:1,
+          titleColor:'#8b8fa8',bodyColor:'#f4f1eb',padding:10,
+          callbacks:{label:c=>`${c.dataset.label}: ${c.raw.toFixed(0)} (${(c.raw-100).toFixed(0)}%)`}
+        }
+      },
+      scales:{
+        y:{grid:{color:'#e8e4dc'},ticks:{color:'#9b9a8a',font:{family:'DM Mono'},callback:v=>`${v}`},
+           title:{display:true,text:'Indexed (Jan 2024 = 100)',color:'#9b9a8a',font:{family:'DM Mono',size:10}}},
+        x:{grid:{color:'#e8e4dc'},ticks:{color:'#9b9a8a',font:{family:'DM Mono'}}}
+      }
+    }
+  });
+}
+
+function renderAllocChart(data) {
+  destroyChart('alloc');
+  const total = Object.values(weights).reduce((s,v)=>s+v,0);
+  const labels = data.holdings.map(h=>h.ticker);
+  const vals = data.holdings.map(h=>weights[h.ticker]||0);
+  const colors = data.holdings.map(h=>h.color);
+
+  charts['alloc'] = new Chart(document.getElementById('chart-alloc'),{
+    type:'doughnut',
+    data:{labels,datasets:[{data:vals,backgroundColor:colors,borderColor:'#0d1117',borderWidth:3}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'right',labels:{color:'#8b8a7a',font:{family:'DM Mono',size:11},padding:12,boxWidth:10}},
+        tooltip:{
+          backgroundColor:'#1a1a2e',borderColor:'#2e2e4a',borderWidth:1,
+          callbacks:{label:c=>`${c.label}: ${c.raw}%`}
+        }
+      }
+    }
+  });
+}
+
+function renderWeights(data) {
+  const grid = document.getElementById('weights-grid');
+  grid.innerHTML = data.holdings.map(h=>`
+    <div class="weight-row">
+      <div class="weight-label">
+        <span class="weight-ticker">${h.ticker}</span>
+        <span class="weight-type">${h.type}</span>
+      </div>
+      <div class="weight-bar-wrap">
+        <div class="weight-bar" id="bar-${h.ticker}" style="width:${weights[h.ticker]}%;background:${h.color}"></div>
+      </div>
+      <input type="range" class="weight-slider" min="0" max="50" step="1"
+        value="${weights[h.ticker]}" oninput="updateWeight('${h.ticker}',this.value)"
+        style="display:none">
+      <span class="weight-pct" id="wpct-${h.ticker}" style="color:${h.color}">${weights[h.ticker]}%</span>
+    </div>
+  `).join('');
+  updateTotalWeight();
+}
+
+function updateWeight(ticker, val) {
+  weights[ticker] = parseInt(val);
+  document.getElementById('bar-'+ticker).style.width = val+'%';
+  document.getElementById('wpct-'+ticker).textContent = val+'%';
+  updateTotalWeight();
+  renderAllocChart(LAYER_DATA[currentLayer]);
+}
+
+function updateTotalWeight() {
+  const total = Object.values(weights).reduce((s,v)=>s+v,0);
+  const el = document.getElementById('total-weight');
+  el.textContent = total+'%';
+  el.style.color = total===100?'#22c55e':total>100?'#ef4444':'#f59e0b';
+}
+
+function renderCompareTable(data) {
+  const s = data.stats;
+  const rows = [
+    {name:'AICR — '+data.name.split('—')[1]?.trim(), ret:'+'+s.ret+'%', sharpe:s.sharpe.toFixed(2), vol:s.vol+'%', dd:s.dd+'%', highlight:true},
+    {name:'Bitcoin (BTC)',    ret:'+41%',  sharpe:'0.68', vol:'62%',  dd:'-65%', highlight:false},
+    {name:'S&P 500 (SPY)',    ret:'+17%',  sharpe:'1.12', vol:'16%',  dd:'-11%', highlight:false},
+    {name:'AI ETF (BOTZ)',    ret:'+28%',  sharpe:'0.91', vol:'24%',  dd:'-22%', highlight:false},
+    {name:'Nasdaq 100 (QQQ)', ret:'+23%',  sharpe:'1.01', vol:'20%',  dd:'-18%', highlight:false},
+  ];
+
+  document.getElementById('compare-table').innerHTML = `
+    <thead><tr>
+      <th style="text-align:left">Product</th>
+      <th>Total Return</th>
+      <th>Sharpe Ratio</th>
+      <th>Volatility</th>
+      <th>Max Drawdown</th>
+    </tr></thead>
+    <tbody>${rows.map(r=>`
+      <tr class="${r.highlight?'highlight-row':''}">
+        <td>${r.name}</td>
+        <td style="color:${r.ret.startsWith('-')?'#ef4444':'#22c55e'};font-weight:700">${r.ret}</td>
+        <td>${r.sharpe}</td>
+        <td style="color:#f59e0b">${r.vol}</td>
+        <td style="color:#ef4444">${r.dd}</td>
+      </tr>`).join('')}
+    </tbody>
+  `;
+}
+
+function renderCorrTable(data) {
+  const corr = data.corr;
+  const assets = Object.keys(corr);
+  const corrColor = v => {
+    if(v===1) return '#e8e4dc';
+    if(v>=0.8) return '#cc444422';
+    if(v>=0.6) return '#c9a84c22';
+    if(v>=0.4) return '#22a85e22';
+    return '#2a7acc22';
+  };
+  const textColor = v => v>=0.8?'#cc4444':v>=0.6?'#a08030':v>=0.4?'#22a85e':'#2a7acc';
+
+  document.getElementById('corr-table').innerHTML = `
+    <thead><tr><th></th>${assets.map(a=>`<th>${a}</th>`).join('')}</tr></thead>
+    <tbody>${assets.map(row=>`
+      <tr><td>${row}</td>${assets.map(col=>{
+        const v = corr[row][assets.indexOf(col)];
+        return `<td><span class="corr-cell" style="background:${corrColor(v)};color:${v===1?'#6b7280':textColor(v)}">${v.toFixed(2)}</span></td>`;
+      }).join('')}</tr>`).join('')}
+    </tbody>
+  `;
+}
+
+function renderThesis(data) {
+  document.getElementById('thesis-text').innerHTML = data.thesis;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+Chart.defaults.color = "#9b9a8a";
+Chart.defaults.borderColor = "#e8e4dc";
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+selectLayer(1);
+</script>
+</body>
+</html>
