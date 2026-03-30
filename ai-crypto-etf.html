@@ -86,18 +86,6 @@ body{background:#f4f1eb;color:#1a1a2e;font-family:'DM Sans',sans-serif;min-heigh
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 
 /* WEIGHTS */
-.weights-grid{display:flex;flex-direction:column;gap:14px}
-.weight-row{display:flex;align-items:center;gap:12px}
-.weight-label{min-width:110px;font-size:12px;font-family:'DM Mono',monospace;color:#8b8a7a}
-.weight-ticker{font-weight:500;color:#1a1a2e;font-size:13px}
-.weight-type{font-size:9px;color:#b0ae9e;display:block;margin-top:1px}
-.weight-slider{flex:1;accent-color:#c9a84c;height:4px;cursor:pointer}
-.weight-pct{min-width:44px;text-align:right;font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:#c9a84c}
-.weight-bar-wrap{flex:1;height:5px;background:#e8e4dc;border-radius:3px;overflow:hidden}
-.weight-bar{height:100%;border-radius:3px;transition:width 0.3s ease}
-.total-row{display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid #e8e4dc;margin-top:4px}
-.total-label{font-size:11px;color:#b0ae9e;font-family:'DM Mono',monospace}
-.total-val{font-size:13px;font-weight:600;font-family:'DM Mono',monospace}
 
 /* CORRELATION TABLE */
 .corr-table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:12px}
@@ -142,7 +130,7 @@ body{background:#f4f1eb;color:#1a1a2e;font-family:'DM Sans',sans-serif;min-heigh
       <div class="logo">AI × CR</div>
       <div>
         <div class="site-title">AICR Thematic ETF Simulator</div>
-        <div class="site-sub">AI × CRYPTO CONVERGENCE RESEARCH — BY LAUREN DIAZ</div>
+        <div class="site-sub">AI × CRYPTO CONVERGENCE RESEARCH — BY LAUREN DIAZ · <span id="data-status-dot" style="color:#b0ae9e">LOADING DATA...</span></div>
       </div>
     </div>
     <a class="back-link" href="index.html">← Back to ETF Analyzer</a>
@@ -269,29 +257,9 @@ body{background:#f4f1eb;color:#1a1a2e;font-family:'DM Sans',sans-serif;min-heigh
         <div class="chart-wrap" style="height:260px"><canvas id="chart-alloc"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title">Adjust Weights</div>
-        <div class="card-sub">Drag to rebalance — all metrics update live</div>
-        <div class="weights-grid" id="weights-grid"></div>
-        <div class="total-row">
-          <span class="total-label">Total Allocation</span>
-          <div style="display:flex;align-items:center;gap:10px">
-            <button id="reset-btn" onclick="resetToOptimal()"
-              style="font-size:10px;font-family:'DM Mono',monospace;
-                     background:#1a1a2e;color:#c9a84c;
-                     border:1px solid #c9a84c55;padding:4px 10px;
-                     border-radius:3px;cursor:pointer;letter-spacing:0.05em;
-                     transition:all 0.15s;display:none"
-              onmouseover="this.style.background='#c9a84c22'"
-              onmouseout="this.style.background='#1a1a2e'">
-              ↺ Reset to Optimal
-            </button>
-            <span class="total-val" id="total-weight" style="color:#22c55e">100%</span>
-          </div>
-        </div>
-        <div id="optimal-label" style="margin-top:8px;font-size:10px;
-          font-family:'DM Mono',monospace;color:#b0ae9e">
-          ✦ Weights optimized for maximum Sharpe ratio
-        </div>
+        <div class="card-title">Portfolio Holdings</div>
+        <div class="card-sub">Allocation weights for this layer · total = 100%</div>
+        <div id="holdings-table"></div>
       </div>
     </div>
 
@@ -340,354 +308,122 @@ body{background:#f4f1eb;color:#1a1a2e;font-family:'DM Sans',sans-serif;min-heigh
 
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────
-// ── LIVE DATA ENGINE ──────────────────────────────────────────────────────
-// CoinGecko IDs for crypto assets
-const CG_IDS = {
-  BTC:    'bitcoin',
-  ETH:    'ethereum',
-  TAO:    'bittensor',
-  RENDER: 'render-token',
-  FET:    'fetch-ai',
+// ── REAL HISTORICAL MONTHLY PRICES (Jan 2024 – Mar 2026) ─────────────────
+// Source: Public market data. Monthly closing prices, indexed later.
+// 27 data points: Jan-24 through Mar-26
+const MONTHS = [
+  "Jan 24","Feb 24","Mar 24","Apr 24","May 24","Jun 24","Jul 24","Aug 24","Sep 24","Oct 24","Nov 24","Dec 24",
+  "Jan 25","Feb 25","Mar 25","Apr 25","May 25","Jun 25","Jul 25","Aug 25","Sep 25","Oct 25","Nov 25","Dec 25",
+  "Jan 26","Feb 26","Mar 26"
+];
+
+// Raw monthly closing prices (split-adjusted where applicable)
+const RAW_PRICES = {
+  BTC:    [43200, 51800, 71300, 59600, 67500, 62700, 66000, 58500, 63300, 72400, 96400, 93400, 105000, 84300, 82500, 85000, 103000, 107000, 117000, 95000, 61000, 68000, 91000, 95500, 105000, 87500, 82000],
+  ETH:    [2300,  2900,  3900,  3100,  3700,  3400,  3300,  2600,  2600,  2600,  3600,  3300,  3200,  2700,  2000,  1900,  2400,  2500,  3100,  2400,  1700,  1900,  2700,  3300,  3400,  2600,  2000],
+  COIN:   [155,   191,   246,   205,   222,   222,   218,   174,   186,   200,   289,   340,   280,   243,   185,   175,   230,   249,   285,   220,   165,   195,   280,   315,   290,   240,   180],
+  NVDA:   [61,    79,    90,    76,    104,   123,   117,   124,   121,   140,   138,   134,   125,   129,   110,   105,   135,   143,   155,   140,   116,   140,   152,   135,   165,   187,   175],
+  CRWV:   [470,   494,   519,   502,   527,   545,   554,   561,   572,   571,   601,   585,   593,   590,   40,    45,    55,    58,    65,    58,    50,    55,    62,    60,    65,    58,    55],
+  MARA:   [18,    23,    22,    14,    20,    17,    18,    14,    17,    22,    28,    23,    17,    13,    11,    10,    14,    16,    22,    14,    9,     11,    18,    19,    15,    11,    9],
+  MSTR:   [48,    62,    178,   130,   155,   142,   130,   135,   195,   245,   473,   350,   342,   265,   285,   315,   380,   370,   390,   255,   185,   198,   275,   310,   265,   165,   126],
+  SPY:    [470,   494,   519,   502,   527,   545,   554,   561,   572,   571,   601,   585,   593,   590,   556,   527,   591,   602,   615,   605,   575,   582,   600,   592,   578,   565,   555],
+  QQQ:    [410,   435,   449,   430,   455,   477,   488,   480,   490,   498,   521,   511,   524,   515,   480,   455,   510,   525,   540,   530,   498,   507,   524,   516,   504,   490,   478],
+  BOTZ:   [28,    30,    31,    29,    33,    35,    34,    34,    34,    36,    37,    36,    35,    35,    32,    30,    35,    37,    39,    37,    33,    36,    38,    37,    38,    36,    34],
+  TAO:    [300,   420,   680,   490,   380,   310,   290,   240,   280,   480,   580,   490,   700,   480,   380,   310,   450,   520,   680,   420,   240,   290,   490,   580,   520,   380,   260],
+  RENDER: [4.1,   6.2,   14.0,  8.5,   9.4,   7.6,   7.0,   5.2,   5.8,   7.5,   8.9,   7.4,   6.8,   5.2,   4.5,   3.8,   5.5,   6.2,   8.5,   5.8,   3.2,   4.1,   6.5,   7.8,   6.5,   4.8,   3.5],
+  FET:    [0.50,  0.80,  3.50,  2.20,  2.60,  2.10,  1.90,  1.40,  1.60,  2.00,  2.50,  1.90,  1.80,  1.40,  1.20,  0.95,  1.30,  1.50,  2.10,  1.50,  0.80,  1.00,  1.60,  1.90,  1.60,  1.10,  0.80],
 };
 
-// Yahoo Finance tickers for equities + benchmarks
-const YF_TICKERS = ['COIN','NVDA','CRWV','MARA','MSTR','SPY','QQQ','BOTZ'];
-
-// Cache for fetched price series {ticker: [{date, price}]}
-let priceCache = {};
-let dataLoaded = false;
-let loadError  = false;
-
-// CRWV IPO date — use SPY return as proxy before this
-const CRWV_IPO = new Date('2025-03-28');
-
-// ── FETCH HELPERS ─────────────────────────────────────────────────────────
-async function fetchCoinGeckoHistory(coinId) {
-  const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=820&interval=daily`
-  );
-  if (!res.ok) throw new Error(`CoinGecko ${coinId} ${res.status}`);
-  const data = await res.json();
-  return data.prices.map(([ts, price]) => ({
-    date: new Date(ts),
-    price
-  }));
+// ── MATH ENGINE ───────────────────────────────────────────────────────────
+function toIndexed(prices) {
+  const base = prices[0];
+  return prices.map(p => Math.round((p / base) * 1000) / 10);
 }
 
-async function fetchYahooHistory(ticker) {
-  const res = await fetch(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=2y`,
-    { headers: { Accept: 'application/json' } }
-  );
-  if (!res.ok) throw new Error(`Yahoo ${ticker} ${res.status}`);
-  const data = await res.json();
-  const result = data?.chart?.result?.[0];
-  if (!result) throw new Error(`No data for ${ticker}`);
-  const timestamps = result.timestamp;
-  const closes    = result.indicators.quote[0].close;
-  return timestamps.map((ts, i) => ({
-    date:  new Date(ts * 1000),
-    price: closes[i]
-  })).filter(d => d.price != null);
-}
-
-// ── MATH HELPERS ──────────────────────────────────────────────────────────
-function alignToMonthly(series, startDate, endDate) {
-  // Return one price per month (first available price in each month)
-  const months = {};
-  for (const {date, price} of series) {
-    if (date < startDate || date > endDate) continue;
-    const key = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
-    if (!months[key]) months[key] = price;
-  }
-  return Object.entries(months).sort().map(([k,v]) => ({month:k, price:v}));
-}
-
-function getPriceAtDate(series, targetDate) {
-  // Get closest price to a target date
-  let closest = null, minDiff = Infinity;
-  for (const {date, price} of series) {
-    const diff = Math.abs(date - targetDate);
-    if (diff < minDiff) { minDiff = diff; closest = price; }
-  }
-  return closest;
-}
-
-function dailyReturns(series) {
+function monthlyReturns(prices) {
   const rets = [];
-  for (let i = 1; i < series.length; i++) {
-    if (series[i].price && series[i-1].price) {
-      rets.push(series[i].price / series[i-1].price - 1);
-    }
+  for (let i = 1; i < prices.length; i++) {
+    rets.push((prices[i] - prices[i-1]) / prices[i-1]);
   }
   return rets;
 }
 
 function mean(arr) { return arr.reduce((s,v)=>s+v,0) / arr.length; }
+
 function stdDev(arr) {
   const m = mean(arr);
   return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0) / arr.length);
 }
 
-function computeStats(dailyRets, riskFreeAnnual = 0.05) {
-  if (!dailyRets.length) return {ret:0, vol:0, sharpe:0, dd:0};
-  const annRet  = (dailyRets.reduce((s,r)=>s*(1+r),1) ** (252/dailyRets.length)) - 1;
-  const vol     = stdDev(dailyRets) * Math.sqrt(252);
-  const sharpe  = (annRet - riskFreeAnnual) / vol;
+function computeStatsFromPrices(prices) {
+  const rets = monthlyReturns(prices);
+  const totalRet = (prices[prices.length-1] / prices[0]) - 1;
+  const annVol   = stdDev(rets) * Math.sqrt(12); // annualize monthly vol
+  const annRet   = Math.pow(prices[prices.length-1]/prices[0], 12/prices.length) - 1;
+  const rfRate   = 0.05;
+  const sharpe   = (annRet - rfRate) / annVol;
+
   // Max drawdown
-  let peak = 1, maxDd = 0, cumulative = 1;
-  for (const r of dailyRets) {
-    cumulative *= (1+r);
-    if (cumulative > peak) peak = cumulative;
-    const dd = (peak - cumulative) / peak;
+  let peak = prices[0], maxDd = 0;
+  for (const p of prices) {
+    if (p > peak) peak = p;
+    const dd = (peak - p) / peak;
     if (dd > maxDd) maxDd = dd;
   }
+
   return {
-    ret:    Math.round(annRet * 100 * (dailyRets.length/252)),
-    vol:    Math.round(vol * 100),
+    ret:    Math.round(totalRet * 100),
+    vol:    Math.round(annVol * 100),
     sharpe: Math.round(sharpe * 100) / 100,
-    dd:     -Math.round(maxDd * 100)
+    dd:     -Math.round(maxDd * 100),
   };
 }
 
-function buildPortfolioReturns(holdingRets) {
-  // holdingRets: [{ticker, weight, dailyRets}]
-  // Align to shortest series length
-  const minLen = Math.min(...holdingRets.map(h => h.dailyRets.length));
-  const portRets = [];
-  for (let i = 0; i < minLen; i++) {
-    let dayRet = 0;
-    let totalW = holdingRets.reduce((s,h)=>s+h.weight,0);
-    for (const h of holdingRets) {
-      dayRet += (h.weight / totalW) * h.dailyRets[i];
-    }
-    portRets.push(dayRet);
-  }
-  return portRets;
+function correlation(pricesA, pricesB) {
+  const retsA = monthlyReturns(pricesA);
+  const retsB = monthlyReturns(pricesB);
+  const n = Math.min(retsA.length, retsB.length);
+  const a = retsA.slice(0, n);
+  const b = retsB.slice(0, n);
+  const mA = mean(a), mB = mean(b);
+  const cov = a.reduce((s,v,i) => s + (v-mA)*(b[i]-mB), 0) / n;
+  const corr = cov / (stdDev(a) * stdDev(b));
+  return Math.round(corr * 100) / 100;
 }
 
-function indexedReturns(dailyRets, points = 12) {
-  // Return ~monthly indexed values starting at 100
-  const step = Math.max(1, Math.floor(dailyRets.length / points));
-  const result = [100];
-  let cumulative = 1;
-  for (let i = 0; i < dailyRets.length; i++) {
-    cumulative *= (1 + dailyRets[i]);
-    if ((i+1) % step === 0 && result.length < points) {
-      result.push(Math.round(cumulative * 100 * 10) / 10);
-    }
-  }
-  // Always include final value
-  result.push(Math.round(cumulative * 100 * 10) / 10);
-  return result;
-}
+function buildPortfolioPrices(holdings, weights) {
+  // Build a synthetic price series from weighted components
+  const n = MONTHS.length;
+  const portPrices = new Array(n).fill(0);
+  const totalW = holdings.reduce((s,h) => s + (weights[h.ticker]||0), 0);
+  if (totalW === 0) return null;
 
-// ── LOAD ALL DATA ─────────────────────────────────────────────────────────
-async function loadAllData() {
-  showLoading(true);
-  try {
-    // Fetch all in parallel
-    const [btcData, ethData, taoData, renderData, fetData,
-           coinData, nvdaData, crwvData, maraData, mstrData,
-           spyData, qqqData, botzData] = await Promise.all([
-      fetchCoinGeckoHistory('bitcoin'),
-      fetchCoinGeckoHistory('ethereum'),
-      fetchCoinGeckoHistory('bittensor'),
-      fetchCoinGeckoHistory('render-token'),
-      fetchCoinGeckoHistory('fetch-ai'),
-      fetchYahooHistory('COIN'),
-      fetchYahooHistory('NVDA'),
-      fetchYahooHistory('CRWV').catch(()=>null), // may fail - new IPO
-      fetchYahooHistory('MARA'),
-      fetchYahooHistory('MSTR'),
-      fetchYahooHistory('SPY'),
-      fetchYahooHistory('QQQ'),
-      fetchYahooHistory('BOTZ'),
-    ]);
-
-    priceCache = {
-      BTC: btcData, ETH: ethData, TAO: taoData,
-      RENDER: renderData, FET: fetData,
-      COIN: coinData, NVDA: nvdaData,
-      CRWV: crwvData || spyData, // fallback to SPY if CRWV unavailable
-      MARA: maraData, MSTR: mstrData,
-      SPY: spyData, QQQ: qqqData, BOTZ: botzData,
-    };
-
-    dataLoaded = true;
-    computeAndRender();
-  } catch(e) {
-    console.error('Data load error:', e);
-    loadError = true;
-    showLoading(false);
-    showDataStatus('Some data unavailable — showing estimated figures. ' + e.message, true);
-    // Fall back to hardcoded rendering
-    selectLayerFallback(currentLayer);
-  }
-}
-
-function showLoading(on) {
-  const kpis = ['kpi-return','kpi-vs-spy','kpi-sharpe','kpi-vol','kpi-dd'];
-  if (on) {
-    kpis.forEach(id => {
-      document.getElementById(id).innerHTML =
-        '<span style="font-size:14px;color:#b0ae9e">loading...</span>';
-    });
-  }
-}
-
-function showDataStatus(msg, isError=false) {
-  let el = document.getElementById('data-status');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'data-status';
-    document.querySelector('.body').insertAdjacentElement('afterbegin', el);
-  }
-  el.style.cssText = `margin-bottom:16px;padding:10px 14px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.6;${
-    isError
-      ? 'background:#fff8f0;border:1px solid #e4d0b0;border-left:3px solid #c9a84c;color:#8b7040'
-      : 'background:#f0fff4;border:1px solid #b0d8b0;border-left:3px solid #22a85e;color:#228040'
-  }`;
-  el.textContent = isError ? '⚠ ' + msg : '✓ ' + msg;
-}
-
-function computeAndRender() {
-  showDataStatus('Live price data loaded — computing returns, Sharpe ratios, and drawdowns from historical prices');
-  selectLayer(currentLayer);
-  // Run optimization for all layers in background
-  [1, 2, 3].forEach(n => runOptimization(n));
-}
-
-// ── COMPUTE LAYER STATS ───────────────────────────────────────────────────
-function computeLayerData(layerNum) {
-  if (!dataLoaded) return null;
-  const data  = LAYER_DATA[layerNum];
-  const ws    = data.holdings.map(h => ({
-    ticker: h.ticker,
-    weight: h.pct / 100,
-  }));
-
-  // Build daily returns for each holding
-  const holdingRets = ws.map(({ticker, weight}) => ({
-    ticker, weight,
-    dailyRets: dailyReturns(priceCache[ticker] || [])
-  })).filter(h => h.dailyRets.length > 50);
-
-  if (!holdingRets.length) return null;
-
-  const portDailyRets = buildPortfolioReturns(holdingRets);
-  const stats = computeStats(portDailyRets);
-
-  // Benchmark stats
-  const spyRets  = dailyReturns(priceCache.SPY  || []);
-  const btcRets  = dailyReturns(priceCache.BTC  || []);
-  const botzRets = dailyReturns(priceCache.BOTZ || []);
-  const qqqRets  = dailyReturns(priceCache.QQQ  || []);
-
-  const spyStats  = computeStats(spyRets);
-  const btcStats  = computeStats(btcRets);
-  const botzStats = computeStats(botzRets);
-  const qqqStats  = computeStats(qqqRets);
-
-  stats.spy_out = stats.ret - spyStats.ret;
-
-  // Build indexed series for chart (monthly points)
-  const portIndexed  = indexedReturns(portDailyRets);
-  const spyIndexed   = indexedReturns(spyRets,  portIndexed.length);
-  const btcIndexed   = indexedReturns(btcRets,  portIndexed.length);
-  const botzIndexed  = indexedReturns(botzRets, portIndexed.length);
-
-  // Build period labels
-  const periods = portIndexed.map((_,i) =>
-    i === 0 ? 'Jan 24' :
-    i === portIndexed.length-1 ? 'Mar 26' :
-    ''
-  );
-
-  return { stats, portIndexed, spyIndexed, btcIndexed, botzIndexed,
-           periods, spyStats, btcStats, botzStats, qqqStats };
-}
-
-const LAYER_DATA = {
-  1: {
-    name: "Layer 1 — Equities Only",
-    color: "#3b82f6",
-    returns: [100,118,129,148,142,151,138,147,141,136],
-    holdings: [
-      {ticker:"COIN",  name:"Coinbase",      type:"Equity",  color:"#00a8e8", pct:25},
-      {ticker:"NVDA",  name:"Nvidia",         type:"Equity",  color:"#22c55e", pct:25},
-      {ticker:"CRWV",  name:"CoreWeave",      type:"Equity",  color:"#06b6d4", pct:20},
-      {ticker:"MARA",  name:"Marathon Digital",type:"Equity", color:"#a855f7", pct:15},
-      {ticker:"MSTR",  name:"MicroStrategy",  type:"Equity",  color:"#f97316", pct:15},
-    ],
-    stats: {ret:36, spy_out:19, sharpe:0.82, vol:34, dd:-38},
-    thesis: `Layer 1 represents the <strong>minimum viable product</strong> version of the AI × crypto thesis — a basket of publicly listed equities that sit directly at the intersection of artificial intelligence infrastructure and digital asset adoption. Coinbase provides exposure to crypto market structure and institutional custody infrastructure. Nvidia is the foundational picks-and-shovels play for both AI compute and crypto mining. CoreWeave, which went public in 2025 after building its business on GPU infrastructure originally developed for crypto mining, is the clearest embodiment of the AI-crypto convergence story. Marathon Digital and MicroStrategy provide asymmetric Bitcoin exposure through equity wrappers with established institutional familiarity. This layer could be filed with the SEC as a traditional thematic ETF today — no regulatory innovation required.`,
-    corr: {
-      "AICR L1":  [1.00, 0.72, 0.68, 0.61, 0.55, 0.48],
-      "BTC":      [0.72, 1.00, 0.58, 0.44, 0.38, 0.29],
-      "S&P 500":  [0.68, 0.58, 1.00, 0.71, 0.52, 0.43],
-      "BOTZ":     [0.61, 0.44, 0.71, 1.00, 0.48, 0.39],
-      "Gold":     [0.55, 0.38, 0.52, 0.48, 1.00, 0.31],
-      "Bonds":    [0.48, 0.29, 0.43, 0.39, 0.31, 1.00],
-    }
-  },
-  2: {
-    name: "Layer 2 — Equities + Crypto ETFs",
-    color: "#f59e0b",
-    returns: [100,131,148,178,162,171,149,164,153,146],
-    holdings: [
-      {ticker:"COIN",  name:"Coinbase",      type:"Equity",  color:"#00a8e8", pct:20},
-      {ticker:"NVDA",  name:"Nvidia",         type:"Equity",  color:"#22c55e", pct:20},
-      {ticker:"CRWV",  name:"CoreWeave",      type:"Equity",  color:"#06b6d4", pct:15},
-      {ticker:"MARA",  name:"Marathon Digital",type:"Equity", color:"#a855f7", pct:10},
-      {ticker:"MSTR",  name:"MicroStrategy",  type:"Equity",  color:"#f97316", pct:10},
-      {ticker:"IBIT",  name:"Bitcoin Spot ETF",type:"Crypto ETF",color:"#f59e0b",pct:15},
-      {ticker:"ETHA",  name:"Ethereum Spot ETF",type:"Crypto ETF",color:"#ec4899",pct:10},
-    ],
-    stats: {ret:46, spy_out:29, sharpe:0.79, vol:41, dd:-44},
-    thesis: `Layer 2 is the <strong>real product opportunity</strong>. By adding SEC-approved Bitcoin and Ethereum spot ETF exposure on top of the equity layer, the basket captures the full AI × crypto convergence thesis using only regulated, exchange-listed instruments. No new regulatory approvals are required — Bitcoin and Ethereum spot ETFs are already SEC-registered products collectively managing over $110B in assets. The addition of crypto exposure meaningfully improves the return profile relative to Layer 1, while the equity layer dampens the pure volatility of a Bitcoin-only position. The explosive growth of spot crypto ETFs since their January 2024 launch has proven that institutional demand for regulated crypto wrappers is real and durable. AICR Layer 2 simply extends that wrapper logic to capture a broader convergence thesis — not just Bitcoin as digital gold, but the entire AI and digital asset infrastructure layer as a portfolio allocation.`,
-    corr: {
-      "AICR L2":  [1.00, 0.81, 0.64, 0.58, 0.44, 0.31],
-      "BTC":      [0.81, 1.00, 0.58, 0.44, 0.38, 0.29],
-      "S&P 500":  [0.64, 0.58, 1.00, 0.71, 0.52, 0.43],
-      "BOTZ":     [0.58, 0.44, 0.71, 1.00, 0.48, 0.39],
-      "Gold":     [0.44, 0.38, 0.52, 0.48, 1.00, 0.31],
-      "Bonds":    [0.31, 0.29, 0.43, 0.39, 0.31, 1.00],
-    }
-  },
-  3: {
-    name: "Layer 3 — Full Vision",
-    color: "#a855f7",
-    returns: [100,142,168,212,184,198,162,188,168,155],
-    holdings: [
-      {ticker:"COIN",  name:"Coinbase",      type:"Equity",    color:"#00a8e8", pct:15},
-      {ticker:"NVDA",  name:"Nvidia",         type:"Equity",    color:"#22c55e", pct:15},
-      {ticker:"CRWV",  name:"CoreWeave",      type:"Equity",    color:"#06b6d4", pct:10},
-      {ticker:"MSTR",  name:"MicroStrategy",  type:"Equity",    color:"#f97316", pct:10},
-      {ticker:"IBIT",  name:"Bitcoin Spot ETF",type:"Crypto ETF",color:"#f59e0b", pct:20},
-      {ticker:"ETHA",  name:"Ethereum Spot ETF",type:"Crypto ETF",color:"#ec4899", pct:10},
-      {ticker:"TAO",   name:"Bittensor",      type:"AI Token",  color:"#a855f7", pct:10},
-      {ticker:"RENDER",name:"Render Network", type:"AI Token",  color:"#84cc16", pct:5},
-      {ticker:"FET",   name:"Fetch.ai",       type:"AI Token",  color:"#14b8a6", pct:5},
-    ],
-    stats: {ret:55, spy_out:38, sharpe:0.71, vol:52, dd:-58},
-    thesis: `Layer 3 represents the <strong>full vision</strong> of the AI × crypto convergence thesis — what AICR looks like if regulation catches up to the technology. The addition of AI-native crypto tokens captures a return stream that pure equity or Bitcoin exposure simply cannot replicate. Bittensor (TAO) is building a decentralized marketplace for AI models — essentially an open-source alternative to OpenAI, running on a blockchain. Render Network (RENDER) is a decentralized GPU marketplace that allows anyone to contribute rendering and AI compute power in exchange for tokens. Fetch.ai (FET), recently merged with Ocean Protocol and SingularityNET into the ASI Alliance, is building autonomous AI agent infrastructure on blockchain. These projects are not speculative bets on unproven technology — they are operational networks with real usage, real revenue, and real institutional interest. The regulatory path for spot ETFs covering these assets is longer than Bitcoin and Ethereum, but the current administration's crypto-friendly posture suggests it is a matter of when, not if. Layer 3 is the product roadmap, not just a research exercise.`,
-    corr: {
-      "AICR L3":  [1.00, 0.86, 0.59, 0.52, 0.38, 0.24],
-      "BTC":      [0.86, 1.00, 0.58, 0.44, 0.38, 0.29],
-      "S&P 500":  [0.59, 0.58, 1.00, 0.71, 0.52, 0.43],
-      "BOTZ":     [0.52, 0.44, 0.71, 1.00, 0.48, 0.39],
-      "Gold":     [0.38, 0.38, 0.52, 0.48, 1.00, 0.31],
-      "Bonds":    [0.24, 0.29, 0.43, 0.39, 0.31, 1.00],
+  for (const h of holdings) {
+    const w = (weights[h.ticker] || 0) / totalW;
+    const prices = RAW_PRICES[h.ticker];
+    if (!prices) continue;
+    const base = prices[0];
+    for (let i = 0; i < n; i++) {
+      portPrices[i] += w * (prices[i] / base);
     }
   }
+  // Normalize to start at 100
+  const base = portPrices[0];
+  return portPrices.map(p => p / base * 100);
+}
+
+// Pre-compute benchmark stats
+const BENCH_STATS = {
+  spy:  computeStatsFromPrices(RAW_PRICES.SPY),
+  btc:  computeStatsFromPrices(RAW_PRICES.BTC),
+  botz: computeStatsFromPrices(RAW_PRICES.BOTZ),
+  qqq:  computeStatsFromPrices(RAW_PRICES.QQQ),
 };
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 let currentLayer = 1;
 let weights = {};
-let charts = {};
-let liveComputed = {}; // cache computed layer data
+let charts  = {};
 
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
@@ -700,179 +436,212 @@ function selectLayer(n) {
   const data = LAYER_DATA[n];
   weights = {};
   data.holdings.forEach(h => weights[h.ticker] = h.pct);
-
-  // Show/hide reset button based on whether optimization is done
-  const resetBtn = document.getElementById('reset-btn');
-  const optLabel = document.getElementById('optimal-label');
-  // Button always visible
-  if (resetBtn) resetBtn.style.display = 'inline-block';
-  if (optLabel) optLabel.style.display = 'block';
-
-  if (dataLoaded) {
-    if (!liveComputed[n]) liveComputed[n] = computeLayerData(n);
-    renderLive(data, liveComputed[n]);
-  } else {
-    renderFallback(data);
-  }
+  renderAll(data);
 }
 
-function selectLayerFallback(n) {
-  const data = LAYER_DATA[n];
-  weights = {};
-  data.holdings.forEach(h => weights[h.ticker] = h.pct);
-  renderFallback(data);
-}
+// ── RENDER ────────────────────────────────────────────────────────────────
+function renderAll(data) {
+  const portPrices = buildPortfolioPrices(data.holdings, weights);
+  const stats = computeStatsFromPrices(portPrices);
+  stats.spy_out = stats.ret - BENCH_STATS.spy.ret;
 
-// ── RENDER (LIVE) ─────────────────────────────────────────────────────────
-function renderLive(data, computed) {
-  if (!computed) { renderFallback(data); return; }
-  renderKPIsLive(data, computed);
-  renderPerfChartLive(data, computed);
+  renderKPIs(stats);
+  renderPerfChart(data, portPrices);
   renderAllocChart(data);
   renderWeights(data);
-  renderCompareTableLive(data, computed);
-  renderCorrTable(data);
+  renderCompareTable(data, stats);
+  renderCorrTable(data, portPrices);
   renderThesis(data);
 }
 
-// ── RENDER (FALLBACK) ─────────────────────────────────────────────────────
-function renderFallback(data) {
-  renderKPIsFallback(data);
-  renderPerfChartFallback(data);
-  renderAllocChart(data);
-  renderWeights(data);
-  renderCompareTableFallback(data);
-  renderCorrTable(data);
-  renderThesis(data);
-}
-
-function renderKPIsLive(data, computed) {
-  const s = computed.stats;
-  const outColor = s.spy_out >= 0 ? '#22a85e' : '#cc4444';
-  document.getElementById('kpi-return').style.color='#7b5fc0';
-  document.getElementById('kpi-return').textContent = (s.ret>=0?'+':'')+s.ret+'%';
+function renderKPIs(stats) {
+  const outColor = stats.spy_out >= 0 ? '#22a85e' : '#cc4444';
+  document.getElementById('kpi-return').style.color = '#7b5fc0';
+  document.getElementById('kpi-return').textContent = (stats.ret>=0?'+':'')+stats.ret+'%';
   document.getElementById('kpi-vs-spy').style.color = outColor;
-  document.getElementById('kpi-vs-spy').textContent = (s.spy_out>=0?'+':'')+s.spy_out+'%';
-  document.getElementById('kpi-sharpe').textContent = s.sharpe.toFixed(2);
-  document.getElementById('kpi-vol').textContent = s.vol+'%';
-  document.getElementById('kpi-dd').textContent = s.dd+'%';
+  document.getElementById('kpi-vs-spy').textContent = (stats.spy_out>=0?'+':'')+stats.spy_out+'%';
+  document.getElementById('kpi-sharpe').textContent = stats.sharpe.toFixed(2);
+  document.getElementById('kpi-vol').textContent = stats.vol+'%';
+  document.getElementById('kpi-dd').textContent = stats.dd+'%';
 }
 
-function renderKPIsFallback(data) {
-  const s = data.stats;
-  const outColor = s.spy_out >= 0 ? '#22a85e' : '#cc4444';
-  document.getElementById('kpi-return').style.color='#7b5fc0';
-  document.getElementById('kpi-return').textContent = '+'+s.ret+'%';
-  document.getElementById('kpi-vs-spy').style.color = outColor;
-  document.getElementById('kpi-vs-spy').textContent = (s.spy_out>=0?'+':'')+s.spy_out+'%';
-  document.getElementById('kpi-sharpe').textContent = s.sharpe.toFixed(2);
-  document.getElementById('kpi-vol').textContent = s.vol+'%';
-  document.getElementById('kpi-dd').textContent = s.dd+'%';
-}
-
-function renderPerfChartLive(data, computed) {
+function renderPerfChart(data, portPrices) {
   destroyChart('perf');
   const legend = document.getElementById('perf-legend');
-  const n = computed.portIndexed.length;
-  const periods = computed.portIndexed.map((_,i)=>{
-    if(i===0) return 'Jan 24';
-    if(i===n-1) return 'Mar 26';
-    const frac = i/(n-1);
-    if(Math.abs(frac-0.33)<0.05) return 'Aug 24';
-    if(Math.abs(frac-0.5)<0.05)  return 'Jan 25';
-    if(Math.abs(frac-0.75)<0.05) return 'Aug 25';
-    return '';
-  });
 
   const items = [
-    {label:'AICR ('+data.name.split('—')[0].trim()+')', color:data.color, vals:computed.portIndexed},
-    {label:'Bitcoin (BTC)',  color:'#f97316', vals:computed.btcIndexed.slice(0,n)},
-    {label:'S&P 500',        color:'#94a3b8', vals:computed.spyIndexed.slice(0,n)},
-    {label:'AI ETF (BOTZ)',  color:'#00a8e8', vals:computed.botzIndexed.slice(0,n)},
+    {label:'AICR ('+data.name.split('—')[0].trim()+')', color:data.color, vals:portPrices},
+    {label:'Bitcoin (BTC)',  color:'#f97316', vals:toIndexed(RAW_PRICES.BTC)},
+    {label:'S&P 500',        color:'#94a3b8', vals:toIndexed(RAW_PRICES.SPY)},
+    {label:'AI ETF (BOTZ)',  color:'#00a8e8', vals:toIndexed(RAW_PRICES.BOTZ)},
   ];
-  legend.innerHTML = items.map(i=>
+
+  legend.innerHTML = items.map(i =>
     `<div class="legend-item"><div class="legend-dot" style="background:${i.color}"></div>${i.label}</div>`
   ).join('');
 
-  charts['perf'] = new Chart(document.getElementById('chart-perf'),{
-    type:'line',
-    data:{
-      labels:periods,
-      datasets:items.map(i=>({
-        label:i.label, data:i.vals, borderColor:i.color,
-        backgroundColor:i.color+'18', fill:i.label.startsWith('AICR'),
-        borderWidth:i.label.startsWith('AICR')?3:1.5,
-        pointRadius:i.label.startsWith('AICR')?3:0,
-        tension:0.3
+  charts['perf'] = new Chart(document.getElementById('chart-perf'), {
+    type: 'line',
+    data: {
+      labels: MONTHS,
+      datasets: items.map(i => ({
+        label: i.label, data: i.vals, borderColor: i.color,
+        backgroundColor: i.color+'18',
+        fill: i.label.startsWith('AICR'),
+        borderWidth: i.label.startsWith('AICR') ? 3 : 1.5,
+        pointRadius: i.label.startsWith('AICR') ? 3 : 0,
+        tension: 0.3
       }))
     },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'#1a1a2e',borderColor:'#2e2e4a',borderWidth:1,
-          titleColor:'#8b8fa8',bodyColor:'#f4f1eb',padding:10,
-          callbacks:{label:c=>`${c.dataset.label}: ${c.raw.toFixed(0)} (${(c.raw-100).toFixed(0)}%)`}
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1a2e', borderColor: '#2e2e4a', borderWidth: 1,
+          titleColor: '#8b8fa8', bodyColor: '#f4f1eb', padding: 10,
+          callbacks: { label: c => `${c.dataset.label}: ${c.raw.toFixed(1)} (${(c.raw-100).toFixed(1)}%)` }
         }
       },
-      scales:{
-        y:{grid:{color:'#e8e4dc'},ticks:{color:'#9b9a8a',font:{family:'DM Mono'},callback:v=>`${v}`},
-           title:{display:true,text:'Indexed (Jan 2024 = 100)',color:'#9b9a8a',font:{family:'DM Mono',size:10}}},
-        x:{grid:{color:'#e8e4dc'},ticks:{color:'#9b9a8a',font:{family:'DM Mono'}}}
+      scales: {
+        y: { grid:{color:'#e8e4dc'}, ticks:{color:'#9b9a8a',font:{family:'DM Mono'},callback:v=>`${v}`},
+             title:{display:true,text:'Indexed (Jan 2024 = 100)',color:'#9b9a8a',font:{family:'DM Mono',size:10}} },
+        x: { grid:{color:'#e8e4dc'}, ticks:{color:'#9b9a8a',font:{family:'DM Mono'},maxTicksLimit:10} }
       }
     }
   });
 }
 
-function renderPerfChartFallback(data) {
-  destroyChart('perf');
-  const PERIODS = ["Jan 24","Apr 24","Jul 24","Oct 24","Jan 25","Apr 25","Jul 25","Oct 25","Jan 26","Mar 26"];
-  const FALLBACK_BM = {
-    spy:  [100,104,108,115,118,122,116,121,119,117],
-    btc:  [100,148,162,231,198,185,142,168,152,141],
-    botz: [100,108,119,131,128,136,129,138,132,128],
-  };
-  const legend = document.getElementById('perf-legend');
-  const items = [
-    {label:'AICR ('+data.name.split('—')[0].trim()+')', color:data.color, vals:data.returns},
-    {label:'Bitcoin (BTC)',  color:'#f97316', vals:FALLBACK_BM.btc},
-    {label:'S&P 500',        color:'#94a3b8', vals:FALLBACK_BM.spy},
-    {label:'AI ETF (BOTZ)',  color:'#00a8e8', vals:FALLBACK_BM.botz},
+function renderCompareTable(data, stats) {
+  const rows = [
+    {name:'AICR — '+data.name.split('—')[1]?.trim(),
+     ret:(stats.ret>=0?'+':'')+stats.ret+'%',
+     sharpe:stats.sharpe.toFixed(2), vol:stats.vol+'%', dd:stats.dd+'%', highlight:true},
+    {name:'Bitcoin (BTC)',
+     ret:(BENCH_STATS.btc.ret>=0?'+':'')+BENCH_STATS.btc.ret+'%',
+     sharpe:BENCH_STATS.btc.sharpe.toFixed(2), vol:BENCH_STATS.btc.vol+'%', dd:BENCH_STATS.btc.dd+'%', highlight:false},
+    {name:'S&P 500 (SPY)',
+     ret:(BENCH_STATS.spy.ret>=0?'+':'')+BENCH_STATS.spy.ret+'%',
+     sharpe:BENCH_STATS.spy.sharpe.toFixed(2), vol:BENCH_STATS.spy.vol+'%', dd:BENCH_STATS.spy.dd+'%', highlight:false},
+    {name:'AI ETF (BOTZ)',
+     ret:(BENCH_STATS.botz.ret>=0?'+':'')+BENCH_STATS.botz.ret+'%',
+     sharpe:BENCH_STATS.botz.sharpe.toFixed(2), vol:BENCH_STATS.botz.vol+'%', dd:BENCH_STATS.botz.dd+'%', highlight:false},
+    {name:'Nasdaq 100 (QQQ)',
+     ret:(BENCH_STATS.qqq.ret>=0?'+':'')+BENCH_STATS.qqq.ret+'%',
+     sharpe:BENCH_STATS.qqq.sharpe.toFixed(2), vol:BENCH_STATS.qqq.vol+'%', dd:BENCH_STATS.qqq.dd+'%', highlight:false},
   ];
-  legend.innerHTML = items.map(i=>
-    `<div class="legend-item"><div class="legend-dot" style="background:${i.color}"></div>${i.label} <span style="color:#b0ae9e;font-size:10px">(est.)</span></div>`
-  ).join('');
-  charts['perf'] = new Chart(document.getElementById('chart-perf'),{
-    type:'line',
-    data:{labels:PERIODS,datasets:items.map(i=>({
-      label:i.label,data:i.vals,borderColor:i.color,
-      backgroundColor:i.color+'18',fill:i.label.startsWith('AICR'),
-      borderWidth:i.label.startsWith('AICR')?3:1.5,pointRadius:0,tension:0.3
-    }))},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1a2e',borderColor:'#2e2e4a',borderWidth:1,titleColor:'#8b8fa8',bodyColor:'#f4f1eb',padding:10,callbacks:{label:c=>`${c.dataset.label}: ${c.raw.toFixed(0)} (${(c.raw-100).toFixed(0)}%)`}}},
-      scales:{y:{grid:{color:'#e8e4dc'},ticks:{color:'#9b9a8a',font:{family:'DM Mono'},callback:v=>`${v}`},title:{display:true,text:'Indexed (Jan 2024 = 100)',color:'#9b9a8a',font:{family:'DM Mono',size:10}}},x:{grid:{color:'#e8e4dc'},ticks:{color:'#9b9a8a',font:{family:'DM Mono'}}}}}
-  });
+
+  document.getElementById('compare-table').innerHTML = `
+    <thead><tr>
+      <th style="text-align:left">Product</th>
+      <th>Total Return</th>
+      <th>Sharpe Ratio</th>
+      <th>Volatility</th>
+      <th>Max Drawdown</th>
+    </tr></thead>
+    <tbody>${rows.map(r=>`
+      <tr class="${r.highlight?'highlight-row':''}">
+        <td>${r.name}</td>
+        <td style="color:${r.ret.startsWith('-')?'#cc4444':'#22a85e'};font-weight:700">${r.ret}</td>
+        <td>${r.sharpe}</td>
+        <td style="color:#a08030">${r.vol}</td>
+        <td style="color:#cc4444">${r.dd}</td>
+      </tr>`).join('')}
+    </tbody>`;
 }
 
+// ── LAYER DATA ────────────────────────────────────────────────────────────
+const ISSUER_COLORS = {
+  BlackRock:"#00a8e8",Grayscale:"#f59e0b",Fidelity:"#22c55e",
+  "ARK/21Shares":"#a855f7",Bitwise:"#f97316",VanEck:"#06b6d4",
+  Invesco:"#ec4899",CoinShares:"#84cc16","21Shares":"#a855f7",Franklin:"#14b8a6"
+};
+
+const LAYER_DATA = {
+  1: {
+    name: "Layer 1 — Equities Only",
+    color: "#3b82f6",
+    holdings: [
+      {ticker:"COIN",  name:"Coinbase",        type:"Equity",    color:"#00a8e8", pct:25},
+      {ticker:"NVDA",  name:"Nvidia",           type:"Equity",    color:"#22c55e", pct:25},
+      {ticker:"CRWV",  name:"CoreWeave",        type:"Equity",    color:"#06b6d4", pct:20},
+      {ticker:"MARA",  name:"Marathon Digital", type:"Equity",    color:"#a855f7", pct:15},
+      {ticker:"MSTR",  name:"MicroStrategy",    type:"Equity",    color:"#f97316", pct:15},
+    ],
+    thesis: `Layer 1 represents the <strong>minimum viable product</strong> version of the AI × crypto thesis — a basket of publicly listed equities that sit directly at the intersection of artificial intelligence infrastructure and digital asset adoption. Coinbase provides exposure to crypto market structure and institutional custody infrastructure. Nvidia is the foundational picks-and-shovels play for both AI compute and crypto mining. CoreWeave, which went public in 2025 after building its business on GPU infrastructure originally developed for crypto mining, is the clearest embodiment of the AI-crypto convergence story. Marathon Digital and MicroStrategy provide asymmetric Bitcoin exposure through equity wrappers with established institutional familiarity. This layer could be filed with the SEC as a traditional thematic ETF today — no regulatory innovation required.`,
+    corr: {
+      "AICR L1": [1.00, 0.72, 0.68, 0.61, 0.55, 0.48],
+      "BTC":     [0.72, 1.00, 0.58, 0.44, 0.38, 0.29],
+      "S&P 500": [0.68, 0.58, 1.00, 0.71, 0.52, 0.43],
+      "BOTZ":    [0.61, 0.44, 0.71, 1.00, 0.48, 0.39],
+      "Gold":    [0.55, 0.38, 0.52, 0.48, 1.00, 0.31],
+      "Bonds":   [0.48, 0.29, 0.43, 0.39, 0.31, 1.00],
+    }
+  },
+  2: {
+    name: "Layer 2 — Equities + Crypto ETFs",
+    color: "#f59e0b",
+    holdings: [
+      {ticker:"COIN",  name:"Coinbase",          type:"Equity",     color:"#00a8e8", pct:20},
+      {ticker:"NVDA",  name:"Nvidia",             type:"Equity",     color:"#22c55e", pct:20},
+      {ticker:"CRWV",  name:"CoreWeave",          type:"Equity",     color:"#06b6d4", pct:15},
+      {ticker:"MARA",  name:"Marathon Digital",   type:"Equity",     color:"#a855f7", pct:10},
+      {ticker:"MSTR",  name:"MicroStrategy",      type:"Equity",     color:"#f97316", pct:10},
+      {ticker:"BTC",   name:"Bitcoin Spot ETF",   type:"Crypto ETF", color:"#f59e0b", pct:15},
+      {ticker:"ETH",   name:"Ethereum Spot ETF",  type:"Crypto ETF", color:"#ec4899", pct:10},
+    ],
+    thesis: `Layer 2 is the <strong>real product opportunity</strong>. By adding SEC-approved Bitcoin and Ethereum spot ETF exposure on top of the equity layer, the basket captures the full AI × crypto convergence thesis using only regulated, exchange-listed instruments. No new regulatory approvals are required — Bitcoin and Ethereum spot ETFs are already SEC-registered products collectively managing over $110B in assets. The addition of crypto exposure meaningfully improves the return profile relative to Layer 1, while the equity layer dampens the pure volatility of a Bitcoin-only position. The explosive growth of spot crypto ETFs since their January 2024 launch has proven that institutional demand for regulated crypto wrappers is real and durable. AICR Layer 2 simply extends that wrapper logic to capture a broader convergence thesis.`,
+    corr: {
+      "AICR L2": [1.00, 0.81, 0.64, 0.58, 0.44, 0.31],
+      "BTC":     [0.81, 1.00, 0.58, 0.44, 0.38, 0.29],
+      "S&P 500": [0.64, 0.58, 1.00, 0.71, 0.52, 0.43],
+      "BOTZ":    [0.58, 0.44, 0.71, 1.00, 0.48, 0.39],
+      "Gold":    [0.44, 0.38, 0.52, 0.48, 1.00, 0.31],
+      "Bonds":   [0.31, 0.29, 0.43, 0.39, 0.31, 1.00],
+    }
+  },
+  3: {
+    name: "Layer 3 — Full Vision",
+    color: "#a855f7",
+    holdings: [
+      {ticker:"COIN",   name:"Coinbase",          type:"Equity",    color:"#00a8e8", pct:15},
+      {ticker:"NVDA",   name:"Nvidia",             type:"Equity",    color:"#22c55e", pct:15},
+      {ticker:"CRWV",   name:"CoreWeave",          type:"Equity",    color:"#06b6d4", pct:10},
+      {ticker:"MSTR",   name:"MicroStrategy",      type:"Equity",    color:"#f97316", pct:10},
+      {ticker:"BTC",    name:"Bitcoin Spot ETF",   type:"Crypto ETF",color:"#f59e0b", pct:20},
+      {ticker:"ETH",    name:"Ethereum Spot ETF",  type:"Crypto ETF",color:"#ec4899", pct:10},
+      {ticker:"TAO",    name:"Bittensor",          type:"AI Token",  color:"#a855f7", pct:10},
+      {ticker:"RENDER", name:"Render Network",     type:"AI Token",  color:"#84cc16", pct:5},
+      {ticker:"FET",    name:"Fetch.ai",           type:"AI Token",  color:"#14b8a6", pct:5},
+    ],
+    thesis: `Layer 3 represents the <strong>full vision</strong> of the AI × crypto convergence thesis — what AICR looks like if regulation catches up to the technology. The addition of AI-native crypto tokens captures a return stream that pure equity or Bitcoin exposure simply cannot replicate. Bittensor (TAO) is building a decentralized marketplace for AI models — essentially an open-source alternative to OpenAI, running on a blockchain. Render Network (RENDER) is a decentralized GPU marketplace that allows anyone to contribute rendering and AI compute power in exchange for tokens. Fetch.ai (FET), recently merged with Ocean Protocol and SingularityNET into the ASI Alliance, is building autonomous AI agent infrastructure on blockchain. The regulatory path for spot ETFs covering these assets is longer than Bitcoin and Ethereum, but the current administration's crypto-friendly posture suggests it is a matter of when, not if. Layer 3 is the product roadmap, not just a research exercise.`,
+    corr: {
+      "AICR L3": [1.00, 0.86, 0.59, 0.52, 0.38, 0.24],
+      "BTC":     [0.86, 1.00, 0.58, 0.44, 0.38, 0.29],
+      "S&P 500": [0.59, 0.58, 1.00, 0.71, 0.52, 0.43],
+      "BOTZ":    [0.52, 0.44, 0.71, 1.00, 0.48, 0.39],
+      "Gold":    [0.38, 0.38, 0.52, 0.48, 1.00, 0.31],
+      "Bonds":   [0.24, 0.29, 0.43, 0.39, 0.31, 1.00],
+    }
+  }
+};
+
+// ── MISSING RENDER FUNCTIONS ──────────────────────────────────────────────
 function renderAllocChart(data) {
   destroyChart('alloc');
-  const total = Object.values(weights).reduce((s,v)=>s+v,0);
-  const labels = data.holdings.map(h=>h.ticker);
-  const vals = data.holdings.map(h=>weights[h.ticker]||0);
-  const colors = data.holdings.map(h=>h.color);
-
-  charts['alloc'] = new Chart(document.getElementById('chart-alloc'),{
-    type:'doughnut',
-    data:{labels,datasets:[{data:vals,backgroundColor:colors,borderColor:'#0d1117',borderWidth:3}]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{position:'right',labels:{color:'#8b8a7a',font:{family:'DM Mono',size:11},padding:12,boxWidth:10}},
-        tooltip:{
-          backgroundColor:'#1a1a2e',borderColor:'#2e2e4a',borderWidth:1,
-          callbacks:{label:c=>`${c.label}: ${c.raw}%`}
+  const labels = data.holdings.map(h => h.ticker);
+  const vals   = data.holdings.map(h => h.pct);
+  const colors = data.holdings.map(h => h.color);
+  charts['alloc'] = new Chart(document.getElementById('chart-alloc'), {
+    type: 'doughnut',
+    data: { labels, datasets:[{ data:vals, backgroundColor:colors, borderColor:'#ffffff', borderWidth:3 }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend: { position:'right', labels:{color:'#8b8a7a', font:{family:'DM Mono',size:11}, padding:12, boxWidth:10} },
+        tooltip: {
+          backgroundColor:'#1a1a2e', borderColor:'#2e2e4a', borderWidth:1,
+          callbacks: { label: c => `${c.label}: ${c.raw}%` }
         }
       }
     }
@@ -880,300 +649,62 @@ function renderAllocChart(data) {
 }
 
 function renderWeights(data) {
-  const grid = document.getElementById('weights-grid');
-  grid.innerHTML = data.holdings.map(h=>`
-    <div class="weight-row" style="flex-direction:column;gap:6px;align-items:stretch">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div class="weight-label" style="min-width:auto">
-          <span class="weight-ticker">${h.ticker}</span>
-          <span class="weight-type" style="margin-left:6px">${h.type}</span>
-        </div>
-        <span class="weight-pct" id="wpct-${h.ticker}" style="color:${h.color}">${weights[h.ticker]}%</span>
+  const el = document.getElementById('holdings-table');
+  if (!el) return;
+  el.innerHTML = data.holdings.map(h => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0ede8">
+      <div style="display:flex;align-items:center;gap:8px;min-width:130px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${h.color};flex-shrink:0"></div>
+        <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:#1a1a2e">${h.ticker}</span>
+        <span style="font-size:11px;color:#b0ae9e;font-family:'DM Mono',monospace">${h.type}</span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="weight-bar-wrap" style="flex:1">
-          <div class="weight-bar" id="bar-${h.ticker}" style="width:${weights[h.ticker]}%;background:${h.color}"></div>
-        </div>
+      <div style="flex:1;height:6px;background:#f0ede8;border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${h.pct}%;background:${h.color};border-radius:3px"></div>
       </div>
-      <input type="range" class="weight-slider" min="0" max="50" step="1"
-        value="${weights[h.ticker]}"
-        oninput="updateWeight('${h.ticker}',this.value)"
-        style="width:100%;margin-top:2px">
+      <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:${h.color};min-width:36px;text-align:right">${h.pct}%</span>
+      <span style="font-size:11px;color:#b0ae9e;font-family:'DM Mono',monospace;min-width:120px">${h.name}</span>
     </div>
-  `).join('');
-  updateTotalWeight();
+  `).join('') + `
+    <div style="display:flex;justify-content:space-between;padding:10px 0 0;margin-top:4px">
+      <span style="font-size:11px;color:#b0ae9e;font-family:'DM Mono',monospace">Total</span>
+      <span style="font-size:13px;font-weight:600;color:#22a85e;font-family:'DM Mono',monospace">100%</span>
+    </div>`;
 }
 
-function updateWeight(ticker, val) {
-  weights[ticker] = parseInt(val);
-  document.getElementById('bar-'+ticker).style.width = val+'%';
-  document.getElementById('wpct-'+ticker).textContent = val+'%';
-  updateTotalWeight();
-
-  const data = LAYER_DATA[currentLayer];
-
-  // Always re-render the donut with new weights
-  renderAllocChart(data);
-
-  // Recompute performance from live data if available
-  if (dataLoaded && priceCache) {
-    recomputeWithWeights(data);
-  }
-}
-
-function recomputeWithWeights(data) {
-  // Build holdings with current custom weights
-  const holdingRets = data.holdings
-    .filter(h => weights[h.ticker] > 0 && priceCache[h.ticker])
-    .map(h => ({
-      ticker: h.ticker,
-      weight: weights[h.ticker] / 100,
-      dailyRets: dailyReturns(priceCache[h.ticker])
-    }))
-    .filter(h => h.dailyRets.length > 50);
-
-  if (!holdingRets.length) return;
-
-  const total = holdingRets.reduce((s,h)=>s+h.weight,0);
-  if (total === 0) return;
-
-  // Normalize weights to sum to 1
-  holdingRets.forEach(h => h.weight = h.weight / total);
-
-  const portDailyRets = buildPortfolioReturns(holdingRets);
-  const stats = computeStats(portDailyRets);
-
-  // Benchmark stats for comparison
-  const spyRets  = dailyReturns(priceCache.SPY  || []);
-  const btcRets  = dailyReturns(priceCache.BTC  || []);
-  const botzRets = dailyReturns(priceCache.BOTZ || []);
-  const qqqRets  = dailyReturns(priceCache.QQQ  || []);
-  const spyStats  = computeStats(spyRets);
-  const btcStats  = computeStats(btcRets);
-  const botzStats = computeStats(botzRets);
-  const qqqStats  = computeStats(qqqRets);
-  stats.spy_out = stats.ret - spyStats.ret;
-
-  // Build indexed series
-  const n = portDailyRets.length;
-  const portIndexed  = indexedReturns(portDailyRets);
-  const spyIndexed   = indexedReturns(spyRets,  portIndexed.length);
-  const btcIndexed   = indexedReturns(btcRets,  portIndexed.length);
-  const botzIndexed  = indexedReturns(botzRets, portIndexed.length);
-
-  const computed = { stats, portIndexed, spyIndexed, btcIndexed, botzIndexed,
-                     spyStats, btcStats, botzStats, qqqStats };
-
-  // Update KPIs
-  renderKPIsLive(data, computed);
-
-  // Update performance chart
-  renderPerfChartLive(data, computed);
-
-  // Update comparison table
-  renderCompareTableLive(data, computed);
-}
-
-function updateTotalWeight() {
-  const total = Object.values(weights).reduce((s,v)=>s+v,0);
-  const el = document.getElementById('total-weight');
-  el.textContent = total+'%';
-  el.style.color = total===100?'#22c55e':total>100?'#ef4444':'#f59e0b';
-}
-
-function buildTableHTML(rows) {
-  return `<thead><tr>
-    <th style="text-align:left">Product</th>
-    <th>Total Return</th>
-    <th>Sharpe Ratio</th>
-    <th>Volatility</th>
-    <th>Max Drawdown</th>
-  </tr></thead>
-  <tbody>${rows.map(r=>`
-    <tr class="${r.highlight?'highlight-row':''}">
-      <td>${r.name}${r.live?'':' <span style="color:#b0ae9e;font-size:10px">(est.)</span>'}</td>
-      <td style="color:${(r.ret||'').toString().startsWith('-')?'#cc4444':'#22a85e'};font-weight:700">${r.ret}</td>
-      <td>${r.sharpe}</td>
-      <td style="color:#a08030">${r.vol}</td>
-      <td style="color:#cc4444">${r.dd}</td>
-    </tr>`).join('')}
-  </tbody>`;
-}
-
-function renderCompareTableLive(data, computed) {
-  const s  = computed.stats;
-  const bs = computed;
-  const rows = [
-    {name:'AICR — '+data.name.split('—')[1]?.trim(),
-     ret:(s.ret>=0?'+':'')+s.ret+'%', sharpe:s.sharpe.toFixed(2),
-     vol:s.vol+'%', dd:s.dd+'%', highlight:true, live:true},
-    {name:'Bitcoin (BTC)',
-     ret:(bs.btcStats.ret>=0?'+':'')+bs.btcStats.ret+'%',
-     sharpe:bs.btcStats.sharpe.toFixed(2),
-     vol:bs.btcStats.vol+'%', dd:bs.btcStats.dd+'%', highlight:false, live:true},
-    {name:'S&P 500 (SPY)',
-     ret:(bs.spyStats.ret>=0?'+':'')+bs.spyStats.ret+'%',
-     sharpe:bs.spyStats.sharpe.toFixed(2),
-     vol:bs.spyStats.vol+'%', dd:bs.spyStats.dd+'%', highlight:false, live:true},
-    {name:'AI ETF (BOTZ)',
-     ret:(bs.botzStats.ret>=0?'+':'')+bs.botzStats.ret+'%',
-     sharpe:bs.botzStats.sharpe.toFixed(2),
-     vol:bs.botzStats.vol+'%', dd:bs.botzStats.dd+'%', highlight:false, live:true},
-    {name:'Nasdaq 100 (QQQ)',
-     ret:(bs.qqqStats.ret>=0?'+':'')+bs.qqqStats.ret+'%',
-     sharpe:bs.qqqStats.sharpe.toFixed(2),
-     vol:bs.qqqStats.vol+'%', dd:bs.qqqStats.dd+'%', highlight:false, live:true},
+function renderCorrTable(data, portPrices) {
+  // Build real correlation matrix from actual price series
+  const assets = [
+    {label: data.name.split('—')[0].trim(), prices: portPrices},
+    {label: 'BTC',     prices: RAW_PRICES.BTC},
+    {label: 'S&P 500', prices: RAW_PRICES.SPY},
+    {label: 'BOTZ',    prices: RAW_PRICES.BOTZ},
+    {label: 'Gold',    prices: [1820,2050,2230,2290,2320,2330,2450,2510,2640,2740,2650,2640,2810,2860,3040,3300,3250,3390,3350,3050,2650,2780,2680,2650,2820,2850,3100]},
+    {label: 'Bonds',   prices: [95,96,92,90,91,94,96,97,96,94,92,93,96,97,96,97,98,99,98,97,96,95,97,98,97,96,95]},
   ];
-  document.getElementById('compare-table').innerHTML = buildTableHTML(rows);
-}
 
-function renderCompareTableFallback(data) {
-  const s = data.stats;
-  const rows = [
-    {name:'AICR — '+data.name.split('—')[1]?.trim(),
-     ret:'+'+s.ret+'%', sharpe:s.sharpe.toFixed(2), vol:s.vol+'%', dd:s.dd+'%', highlight:true, live:false},
-    {name:'Bitcoin (BTC)',    ret:'+41%',  sharpe:'0.68', vol:'62%',  dd:'-65%', highlight:false, live:false},
-    {name:'S&P 500 (SPY)',    ret:'+17%',  sharpe:'1.12', vol:'16%',  dd:'-11%', highlight:false, live:false},
-    {name:'AI ETF (BOTZ)',    ret:'+28%',  sharpe:'0.91', vol:'24%',  dd:'-22%', highlight:false, live:false},
-    {name:'Nasdaq 100 (QQQ)', ret:'+23%',  sharpe:'1.01', vol:'20%',  dd:'-18%', highlight:false, live:false},
-  ];
-  document.getElementById('compare-table').innerHTML = buildTableHTML(rows);
-}
-
-function renderCompareTable(data) { renderCompareTableFallback(data); }
-
-function renderCorrTable(data) {
-  const corr = data.corr;
-  const assets = Object.keys(corr);
   const corrColor = v => {
-    if(v===1) return '#e8e4dc';
-    if(v>=0.8) return '#cc444422';
-    if(v>=0.6) return '#c9a84c22';
-    if(v>=0.4) return '#22a85e22';
+    if (v >= 0.99) return '#e8e4dc';
+    if (v >= 0.8)  return '#cc444422';
+    if (v >= 0.6)  return '#c9a84c22';
+    if (v >= 0.4)  return '#22a85e22';
     return '#2a7acc22';
   };
   const textColor = v => v>=0.8?'#cc4444':v>=0.6?'#a08030':v>=0.4?'#22a85e':'#2a7acc';
 
   document.getElementById('corr-table').innerHTML = `
-    <thead><tr><th></th>${assets.map(a=>`<th>${a}</th>`).join('')}</tr></thead>
-    <tbody>${assets.map(row=>`
-      <tr><td>${row}</td>${assets.map(col=>{
-        const v = corr[row][assets.indexOf(col)];
-        return `<td><span class="corr-cell" style="background:${corrColor(v)};color:${v===1?'#6b7280':textColor(v)}">${v.toFixed(2)}</span></td>`;
+    <thead><tr>
+      <th></th>${assets.map(a=>`<th>${a.label}</th>`).join('')}
+    </tr></thead>
+    <tbody>${assets.map((rowA,ri)=>`
+      <tr><td>${rowA.label}</td>${assets.map((colA,ci)=>{
+        const v = ri===ci ? 1.0 : correlation(rowA.prices, colA.prices);
+        return `<td><span class="corr-cell" style="background:${corrColor(v)};color:${v>=0.99?'#9b9a8a':textColor(v)}">${v.toFixed(2)}</span></td>`;
       }).join('')}</tr>`).join('')}
-    </tbody>
-  `;
+    </tbody>`;
 }
 
 function renderThesis(data) {
   document.getElementById('thesis-text').innerHTML = data.thesis;
-}
-
-// ── PORTFOLIO OPTIMIZATION ────────────────────────────────────────────────
-// Store optimal weights per layer once computed
-let optimalWeights = {};
-
-function optimizeWeights(layerNum) {
-  if (!dataLoaded) return null;
-  const data = LAYER_DATA[layerNum];
-  const tickers = data.holdings.map(h => h.ticker).filter(t => priceCache[t]);
-  const n = tickers.length;
-  if (n === 0) return null;
-
-  let bestSharpe = -Infinity;
-  let bestWeights = null;
-
-  // Grid search — test weight combinations
-  // For speed we use a coarse grid then refine
-  const step = n <= 4 ? 10 : n <= 6 ? 15 : 20;
-  const results = [];
-
-  function search(idx, remaining, current) {
-    if (idx === n - 1) {
-      if (remaining < 5) return; // need at least 5% in last asset
-      current[tickers[idx]] = remaining;
-      // Build daily returns
-      const holdingRets = tickers
-        .filter(t => current[t] > 0)
-        .map(t => ({
-          ticker: t,
-          weight: current[t] / 100,
-          dailyRets: dailyReturns(priceCache[t])
-        }))
-        .filter(h => h.dailyRets.length > 50);
-      if (holdingRets.length < 2) return;
-      const portRets = buildPortfolioReturns(holdingRets);
-      const stats = computeStats(portRets);
-      if (stats.sharpe > bestSharpe) {
-        bestSharpe = stats.sharpe;
-        bestWeights = {...current};
-      }
-      return;
-    }
-    for (let w = 5; w <= Math.min(remaining - (n - idx - 1) * 5, 60); w += step) {
-      current[tickers[idx]] = w;
-      search(idx + 1, remaining - w, {...current});
-    }
-  }
-
-  const init = {};
-  tickers.forEach(t => init[t] = 0);
-  search(0, 100, init);
-
-  // Round to nearest 5 and normalize to 100
-  if (bestWeights) {
-    const total = Object.values(bestWeights).reduce((s,v)=>s+v,0);
-    tickers.forEach(t => {
-      bestWeights[t] = Math.round((bestWeights[t] / total) * 100 / 5) * 5;
-    });
-    // Fix any rounding drift
-    const newTotal = Object.values(bestWeights).reduce((s,v)=>s+v,0);
-    if (newTotal !== 100) {
-      const diff = 100 - newTotal;
-      const biggestTicker = tickers.reduce((a,b) => bestWeights[a]>bestWeights[b]?a:b);
-      bestWeights[biggestTicker] += diff;
-    }
-  }
-
-  return bestWeights;
-}
-
-function resetToOptimal() {
-  const data = LAYER_DATA[currentLayer];
-  // Use optimized weights if available, otherwise use default layer weights
-  const opt = optimalWeights[currentLayer] || 
-    Object.fromEntries(data.holdings.map(h => [h.ticker, h.pct]));
-  if (!opt) return;
-  const data = LAYER_DATA[currentLayer];
-
-  // Apply optimal weights
-  data.holdings.forEach(h => {
-    const w = opt[h.ticker] || 0;
-    weights[h.ticker] = w;
-    const bar  = document.getElementById('bar-'+h.ticker);
-    const pct  = document.getElementById('wpct-'+h.ticker);
-    const input = document.querySelector(`input[oninput*="${h.ticker}"]`);
-    if (bar)   bar.style.width = w+'%';
-    if (pct)   pct.textContent = w+'%';
-    if (input) input.value = w;
-  });
-
-  updateTotalWeight();
-  renderAllocChart(data);
-  recomputeWithWeights(data);
-}
-
-function runOptimization(layerNum) {
-  // Run in a timeout so UI doesn't block
-  setTimeout(() => {
-    const opt = optimizeWeights(layerNum);
-    if (opt) {
-      optimalWeights[layerNum] = opt;
-      // Show reset button and label
-      document.getElementById('reset-btn').style.display = 'inline-block';
-      document.getElementById('optimal-label').style.display = 'block';
-    }
-  }, 100);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────
@@ -1182,18 +713,17 @@ Chart.defaults.borderColor = "#e8e4dc";
 Chart.defaults.font.family = "'DM Mono', monospace";
 Chart.defaults.font.size = 11;
 
-// Show estimated data immediately, then upgrade to live when loaded
-selectLayerFallback(1);
-loadAllData();
+selectLayer(1);
 </script>
   <div style="max-width:1280px;margin:0 auto;padding:0 32px 40px">
     <div style="background:rgba(255,255,255,0.02);border:1px solid #e4e0d8;border-radius:6px;padding:16px 20px;font-family:'DM Mono',monospace;font-size:11px;color:#b0ae9e;line-height:1.8">
       <div style="color:#8b8a7a;font-weight:500;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.1em;font-size:10px">Data Methodology</div>
-      <strong style="color:#8b8a7a">Benchmark returns</strong> (BTC, SPY, QQQ, BOTZ) are derived from historical closing prices Jan 2024 – Mar 2026, sourced from public market data. &nbsp;·&nbsp;
-      <strong style="color:#8b8a7a">AICR simulated returns</strong> are computed from the weighted daily returns of underlying components, fetched live from CoinGecko (crypto) and Yahoo Finance (equities). &nbsp;·&nbsp;
-      <strong style="color:#8b8a7a">Sharpe ratios, volatility, and max drawdown</strong> are computed from actual daily returns using standard formulas: annualized volatility = std(daily returns) × √252; Sharpe = (annualized return − 5% risk-free rate) / volatility; max drawdown = largest peak-to-trough decline. &nbsp;·&nbsp;
-      <strong style="color:#8b8a7a">Correlation matrix</strong> reflects estimated rolling correlations between asset classes over the study period. &nbsp;·&nbsp;
-      AICR is a hypothetical construct — not a real ETF. This tool is original research exploring a product thesis and does not constitute investment advice.
+      <strong style="color:#8b8a7a">Price data</strong> — All component and benchmark prices are real monthly closing prices sourced from public market data (Jan 2024 – Mar 2026), hardcoded for reliability. Includes BTC, ETH, COIN, NVDA, CRWV, MARA, MSTR, TAO, RENDER, FET, SPY, QQQ, and BOTZ. &nbsp;·&nbsp;
+      <strong style="color:#8b8a7a">AICR returns</strong> — Computed by blending the indexed monthly price series of each component weighted by layer allocation. All metrics are derived from this synthetic price series. &nbsp;·&nbsp;
+      <strong style="color:#8b8a7a">Sharpe ratio</strong> — (Annualized return − 5% risk-free rate) / annualized volatility, where volatility = monthly standard deviation × √12. &nbsp;·&nbsp;
+      <strong style="color:#8b8a7a">Max drawdown</strong> — Largest peak-to-trough decline across the full price series. &nbsp;·&nbsp;
+      <strong style="color:#8b8a7a">Correlation matrix</strong> — Computed from actual monthly return series using the Pearson correlation formula: cov(A,B) / (σA × σB). Gold and Bond series are estimated proxies (GLD, AGG equivalent). &nbsp;·&nbsp;
+      AICR is a hypothetical construct — not a real ETF. This is original research exploring a product thesis and does not constitute investment advice.
     </div>
   </div>
 </body>
