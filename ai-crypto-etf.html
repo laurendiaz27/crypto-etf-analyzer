@@ -143,10 +143,10 @@ body{background:#f4f1eb;color:#1a1a2e;font-family:'DM Sans',sans-serif;min-heigh
     <div class="hero-tag"><span class="hero-tag-dot"></span>ORIGINAL RESEARCH · HYPOTHETICAL SIMULATION</div>
     <h1 class="hero-title">What if AI and Crypto<br><span>were one ETF?</span></h1>
     <p class="hero-desc">
-      The leading institutional asset managers identify AI and tokenization as separate mega forces in their 2026 outlooks, but they are increasingly the same infrastructure story. This simulator explores a hypothetical thematic ETF (<strong style="color:#f0f6fc">AICR</strong>) that captures the convergence of artificial intelligence and digital assets across three investability tiers. Explore the layers. Compare the returns. Stress-test the thesis.
+      The leading institutional asset managers identify AI and tokenization as separate mega-forces in their 2026 outlooks — but they are increasingly the same infrastructure story. This simulator explores a hypothetical thematic ETF (<strong style="color:#f0f6fc">AICR</strong>) that captures the convergence of artificial intelligence and digital assets across three investability tiers. Adjust the weights. Compare the returns. Stress-test the thesis.
     </p>
     <div class="hero-disclaimer">
-      ⚠ Hypothetical simulation only. Past performance is not indicative of future results. AICR is not a real ETF. This is original research exploring a product thesis. All return data is illustrative and based on publicly available historical prices.
+      ⚠ Hypothetical simulation only. Past performance is not indicative of future results. AICR is not a real ETF — this is original research exploring a product thesis. All return data is illustrative and based on publicly available historical prices.
     </div>
   </div>
 </div>
@@ -190,7 +190,7 @@ body{background:#f4f1eb;color:#1a1a2e;font-family:'DM Sans',sans-serif;min-heigh
     <div class="layer-card" id="layer-card-3" onclick="selectLayer(3)">
       <div class="layer-num">Layer 3</div>
       <div class="layer-name">Full Vision</div>
-      <div class="layer-desc">Adds AI-native crypto tokens (Bittensor, Render, Fetch.ai) that are not yet SEC-approved for ETF inclusion. Shows the full thesis if regulation catches up.</div>
+      <div class="layer-desc">Adds AI-native crypto tokens — Bittensor, Render, Fetch.ai — that are not yet SEC-approved for ETF inclusion. Shows the full thesis if regulation catches up.</div>
       <span class="layer-status status-purple">◈ Aspirational · Pending Regulation</span>
       <div class="layer-holdings">
         <span class="holding-tag">COIN</span>
@@ -266,8 +266,16 @@ body{background:#f4f1eb;color:#1a1a2e;font-family:'DM Sans',sans-serif;min-heigh
     <!-- COMPARISON TABLE -->
     <div class="card">
       <div class="card-title">Head-to-Head Comparison</div>
-      <div class="card-sub">AICR vs major benchmarks · All metrics illustrative · Jan 2024 – Mar 2026</div>
+      <div class="card-sub">AICR vs major benchmarks · All metrics computed from real monthly closing prices · Jan 2024 – Mar 2026</div>
       <table class="compare-table" id="compare-table"></table>
+    </div>
+
+    <!-- RETURN ATTRIBUTION -->
+    <div class="card">
+      <div class="card-title">Return Attribution</div>
+      <div class="card-sub">Individual holding contribution to total portfolio return · weight × asset return = contribution</div>
+      <div id="attribution-table"></div>
+      <div id="attribution-insight" style="margin-top:16px;padding:12px 16px;background:#f4f1eb;border-radius:4px;border-left:3px solid #c9a84c;font-size:12px;color:#8b8a7a;line-height:1.8;font-family:'DM Mono',monospace"></div>
     </div>
 
     <!-- CORRELATION -->
@@ -294,7 +302,7 @@ body{background:#f4f1eb;color:#1a1a2e;font-family:'DM Sans',sans-serif;min-heigh
         </div>
         <div style="display:flex;gap:16px;align-items:flex-start">
           <div style="min-width:80px;font-size:10px;font-family:'DM Mono',monospace;color:#a08030;background:#c9a84c11;border:1px solid #c9a84c33;padding:4px 8px;border-radius:2px;text-align:center;line-height:1.6">LAYER 2<br>TODAY</div>
-          <div style="font-size:13px;color:#6b6f7a;line-height:1.7">Adding Bitcoin and Ethereum exposure via existing spot ETFs requires no new regulatory approval. These are already SEC-registered products from multiple issuers. A fund-of-funds structure or direct ETF allocation could achieve this today, subject to investment company act considerations.</div>
+          <div style="font-size:13px;color:#6b6f7a;line-height:1.7">Adding Bitcoin and Ethereum exposure via existing spot ETFs requires no new regulatory approval — these are already SEC-registered products from multiple issuers. A fund-of-funds structure or direct ETF allocation could achieve this today, subject to investment company act considerations.</div>
         </div>
         <div style="display:flex;gap:16px;align-items:flex-start">
           <div style="min-width:80px;font-size:10px;font-family:'DM Mono',monospace;color:#7b5fc0;background:#8b6fd011;border:1px solid #8b6fd033;padding:4px 8px;border-radius:2px;text-align:center;line-height:1.6">LAYER 3<br>FUTURE</div>
@@ -450,6 +458,7 @@ function renderAll(data) {
   renderAllocChart(data);
   renderWeights(data);
   renderCompareTable(data, stats);
+  renderAttribution(data);
   renderCorrTable(data, portPrices);
   renderThesis(data);
 }
@@ -568,7 +577,7 @@ const LAYER_DATA = {
       {ticker:"MARA",  name:"Marathon Digital", type:"Equity",    color:"#a855f7", pct:15},
       {ticker:"MSTR",  name:"MicroStrategy",    type:"Equity",    color:"#f97316", pct:15},
     ],
-    thesis: `Layer 1 represents the <strong>minimum viable product</strong> version of the AI × crypto thesis, a basket of publicly listed equities that sit directly at the intersection of artificial intelligence infrastructure and digital asset adoption. Coinbase provides exposure to crypto market structure and institutional custody infrastructure. Nvidia serves as the core infrastructure provider underpinning both AI computing and crypto mining. CoreWeave, which went public in 2025 after building its business on GPU infrastructure originally developed for crypto mining, is the clearest embodiment of the AI-crypto convergence story. Marathon Digital and MicroStrategy provide asymmetric Bitcoin exposure through equity wrappers with established institutional familiarity. This layer could be filed with the SEC as a traditional thematic ETF today, no regulatory innovation required.`,
+    thesis: `Layer 1 represents the <strong>minimum viable product</strong> version of the AI × crypto thesis — a basket of publicly listed equities that sit directly at the intersection of artificial intelligence infrastructure and digital asset adoption. Coinbase provides exposure to crypto market structure and institutional custody infrastructure. Nvidia is the foundational picks-and-shovels play for both AI compute and crypto mining. CoreWeave, which went public in 2025 after building its business on GPU infrastructure originally developed for crypto mining, is the clearest embodiment of the AI-crypto convergence story. Marathon Digital and MicroStrategy provide asymmetric Bitcoin exposure through equity wrappers with established institutional familiarity. This layer could be filed with the SEC as a traditional thematic ETF today — no regulatory innovation required.`,
     corr: {
       "AICR L1": [1.00, 0.72, 0.68, 0.61, 0.55, 0.48],
       "BTC":     [0.72, 1.00, 0.58, 0.44, 0.38, 0.29],
@@ -590,7 +599,7 @@ const LAYER_DATA = {
       {ticker:"BTC",   name:"Bitcoin Spot ETF",   type:"Crypto ETF", color:"#f59e0b", pct:15},
       {ticker:"ETH",   name:"Ethereum Spot ETF",  type:"Crypto ETF", color:"#ec4899", pct:10},
     ],
-    thesis: `Layer 2 is the <strong>real product opportunity</strong>. By adding SEC-approved Bitcoin and Ethereum spot ETF exposure on top of the equity layer, the basket captures the full AI × crypto convergence thesis using only regulated, exchange-listed instruments. No new regulatory approvals are required. Bitcoin and Ethereum spot ETFs are already SEC-registered products collectively managing over $110B in assets. The addition of crypto exposure meaningfully improves the return profile relative to Layer 1, while the equity layer dampens the pure volatility of a Bitcoin-only position. The explosive growth of spot crypto ETFs since their January 2024 launch has proven that institutional demand for regulated crypto wrappers is real and durable. AICR Layer 2 simply extends that wrapper logic to capture a broader convergence thesis.`,
+    thesis: `Layer 2 is the <strong>real product opportunity</strong>. By adding SEC-approved Bitcoin and Ethereum spot ETF exposure on top of the equity layer, the basket captures the full AI × crypto convergence thesis using only regulated, exchange-listed instruments. No new regulatory approvals are required — Bitcoin and Ethereum spot ETFs are already SEC-registered products collectively managing over $110B in assets. The addition of crypto exposure meaningfully improves the return profile relative to Layer 1, while the equity layer dampens the pure volatility of a Bitcoin-only position. The explosive growth of spot crypto ETFs since their January 2024 launch has proven that institutional demand for regulated crypto wrappers is real and durable. AICR Layer 2 simply extends that wrapper logic to capture a broader convergence thesis.`,
     corr: {
       "AICR L2": [1.00, 0.81, 0.64, 0.58, 0.44, 0.31],
       "BTC":     [0.81, 1.00, 0.58, 0.44, 0.38, 0.29],
@@ -614,7 +623,7 @@ const LAYER_DATA = {
       {ticker:"RENDER", name:"Render Network",     type:"AI Token",  color:"#84cc16", pct:5},
       {ticker:"FET",    name:"Fetch.ai",           type:"AI Token",  color:"#14b8a6", pct:5},
     ],
-    thesis: `Layer 3 represents the <strong>full vision</strong> of the AI × crypto convergence thesis: What AICR looks like if regulation catches up to the technology. The addition of AI-native crypto tokens captures a return stream that pure equity or Bitcoin exposure simply cannot replicate. Bittensor (TAO) is building a decentralized marketplace for AI models, essentially an open-source alternative to OpenAI, running on a blockchain. Render Network (RENDER) is a decentralized GPU marketplace that allows anyone to contribute rendering and AI compute power in exchange for tokens. Fetch.ai (FET), recently merged with Ocean Protocol and SingularityNET into the ASI Alliance, is building autonomous AI agent infrastructure on blockchain. The regulatory path for spot ETFs covering these assets is longer than Bitcoin and Ethereum, but the current administration's crypto-friendly posture suggests it is a matter of when, not if. Layer 3 is the product roadmap, not just a research exercise.`,
+    thesis: `Layer 3 represents the <strong>full vision</strong> of the AI × crypto convergence thesis — what AICR looks like if regulation catches up to the technology. The addition of AI-native crypto tokens captures a return stream that pure equity or Bitcoin exposure simply cannot replicate. Bittensor (TAO) is building a decentralized marketplace for AI models — essentially an open-source alternative to OpenAI, running on a blockchain. Render Network (RENDER) is a decentralized GPU marketplace that allows anyone to contribute rendering and AI compute power in exchange for tokens. Fetch.ai (FET), recently merged with Ocean Protocol and SingularityNET into the ASI Alliance, is building autonomous AI agent infrastructure on blockchain. The regulatory path for spot ETFs covering these assets is longer than Bitcoin and Ethereum, but the current administration's crypto-friendly posture suggests it is a matter of when, not if. Layer 3 is the product roadmap, not just a research exercise.`,
     corr: {
       "AICR L3": [1.00, 0.86, 0.59, 0.52, 0.38, 0.24],
       "BTC":     [0.86, 1.00, 0.58, 0.44, 0.38, 0.29],
@@ -669,6 +678,83 @@ function renderWeights(data) {
       <span style="font-size:11px;color:#b0ae9e;font-family:'DM Mono',monospace">Total</span>
       <span style="font-size:13px;font-weight:600;color:#22a85e;font-family:'DM Mono',monospace">100%</span>
     </div>`;
+}
+
+function renderAttribution(data) {
+  const el  = document.getElementById('attribution-table');
+  const ins = document.getElementById('attribution-insight');
+  if (!el) return;
+
+  // Compute each holding's total return and weighted contribution
+  const rows = data.holdings.map(h => {
+    const prices = RAW_PRICES[h.ticker];
+    if (!prices) return null;
+    const assetReturn = (prices[prices.length-1] / prices[0] - 1) * 100;
+    const weight      = h.pct / 100;
+    const contribution = weight * assetReturn;
+    return { ...h, assetReturn, contribution };
+  }).filter(Boolean).sort((a,b) => b.contribution - a.contribution);
+
+  const totalContrib = rows.reduce((s,r) => s + r.contribution, 0);
+
+  // Bar chart style table
+  const maxAbs = Math.max(...rows.map(r => Math.abs(r.contribution)));
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:110px 50px 1fr 80px 90px;gap:0;margin-top:8px">
+      <div style="font-size:10px;color:#b0ae9e;font-family:'DM Mono',monospace;padding:6px 0;border-bottom:1px solid #e8e4dc">TICKER</div>
+      <div style="font-size:10px;color:#b0ae9e;font-family:'DM Mono',monospace;padding:6px 0;border-bottom:1px solid #e8e4dc;text-align:right">WEIGHT</div>
+      <div style="font-size:10px;color:#b0ae9e;font-family:'DM Mono',monospace;padding:6px 0 6px 12px;border-bottom:1px solid #e8e4dc">ASSET RETURN</div>
+      <div style="font-size:10px;color:#b0ae9e;font-family:'DM Mono',monospace;padding:6px 0;border-bottom:1px solid #e8e4dc;text-align:right">CONTRIB.</div>
+      <div style="font-size:10px;color:#b0ae9e;font-family:'DM Mono',monospace;padding:6px 0;border-bottom:1px solid #e8e4dc;text-align:right">TYPE</div>
+      ${rows.map(r => {
+        const barW  = Math.abs(r.contribution) / maxAbs * 100;
+        const color = r.contribution >= 0 ? '#22a85e' : '#cc4444';
+        const retColor = r.assetReturn >= 0 ? '#22a85e' : '#cc4444';
+        return `
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f4f1eb">
+            <div style="width:8px;height:8px;border-radius:50%;background:${r.color};flex-shrink:0"></div>
+            <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:#1a1a2e">${r.ticker}</span>
+          </div>
+          <div style="padding:10px 0;border-bottom:1px solid #f4f1eb;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:#8b8a7a">${r.pct}%</div>
+          <div style="padding:10px 0 10px 12px;border-bottom:1px solid #f4f1eb">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:6px;background:#f0ede8;border-radius:3px;overflow:hidden;max-width:160px">
+                <div style="height:100%;width:${barW}%;background:${color};border-radius:3px"></div>
+              </div>
+              <span style="font-family:'DM Mono',monospace;font-size:12px;color:${retColor};font-weight:600;white-space:nowrap">${r.assetReturn>=0?'+':''}${r.assetReturn.toFixed(0)}%</span>
+            </div>
+          </div>
+          <div style="padding:10px 0;border-bottom:1px solid #f4f1eb;text-align:right;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:${color}">${r.contribution>=0?'+':''}${r.contribution.toFixed(1)}pp</div>
+          <div style="padding:10px 0;border-bottom:1px solid #f4f1eb;text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:#b0ae9e">${r.type}</div>
+        `;
+      }).join('')}
+      <div style="padding:10px 0;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:#1a1a2e">TOTAL</div>
+      <div></div>
+      <div></div>
+      <div style="padding:10px 0;text-align:right;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:${totalContrib>=0?'#22a85e':'#cc4444'}">${totalContrib>=0?'+':''}${totalContrib.toFixed(1)}pp</div>
+      <div></div>
+    </div>
+  `;
+
+  // Generate insight based on top contributors
+  const topPos = rows.filter(r => r.contribution > 0).slice(0, 2);
+  const topNeg = rows.filter(r => r.contribution < 0);
+  const topTwo = topPos.map(r => r.ticker).join(' and ');
+  const topTwoContrib = topPos.reduce((s,r) => s+r.contribution, 0);
+  const pctOfTotal = totalContrib > 0 ? (topTwoContrib / totalContrib * 100).toFixed(0) : 0;
+
+  let insightText = `✦ Key Insight: `;
+  if (topPos.length >= 2) {
+    insightText += `${topTwo} account for ${pctOfTotal}% of total portfolio return, contributing ${topTwoContrib.toFixed(1)} percentage points of the ${totalContrib.toFixed(1)}pp total. `;
+  }
+  if (topNeg.length > 0) {
+    const draggers = topNeg.map(r => `${r.ticker} (${r.contribution.toFixed(1)}pp)`).join(', ');
+    insightText += `Detractors: ${draggers}. `;
+  }
+  insightText += `This concentration profile is important context — the thesis is highly dependent on a small number of names performing.`;
+
+  ins.textContent = insightText;
 }
 
 function renderCorrTable(data, portPrices) {
